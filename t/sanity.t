@@ -17,7 +17,7 @@ our $HttpConfig = <<_EOC_;
     lua_package_path "$pwd/../lua-resty-lock/?.lua;$pwd/lib/?.lua;$pwd/t/lib/?.lua;;";
 _EOC_
 
-no_diff();
+#no_diff();
 no_long_string();
 run_tests();
 
@@ -77,8 +77,21 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
+
             local hc = require "resty.upstream.healthcheck"
             ngx.print(hc.status_page())
+
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
+        ';
+    }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
         ';
     }
 --- request
@@ -91,6 +104,8 @@ Upstream foo.com
         127.0.0.1:12355 up
     Backup Peers
         127.0.0.1:12356 up
+upstream addr: 127.0.0.1:12354
+upstream addr: 127.0.0.1:12355
 
 --- no_error_log
 [error]
@@ -157,8 +172,21 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
+
             local hc = require "resty.upstream.healthcheck"
             ngx.print(hc.status_page())
+
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
+        ';
+    }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
         ';
     }
 --- request
@@ -171,6 +199,8 @@ Upstream foo.com
         127.0.0.1:12355 up
     Backup Peers
         127.0.0.1:12356 DOWN
+upstream addr: 127.0.0.1:12354
+upstream addr: 127.0.0.1:12355
 
 --- no_error_log
 [alert]
@@ -241,8 +271,21 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
+
             local hc = require "resty.upstream.healthcheck"
             ngx.print(hc.status_page())
+
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
+        ';
+    }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
         ';
     }
 --- request
@@ -255,6 +298,9 @@ Upstream foo.com
         127.0.0.1:12355 DOWN
     Backup Peers
         127.0.0.1:12356 up
+upstream addr: 127.0.0.1:12354
+upstream addr: 127.0.0.1:12354
+
 --- no_error_log
 [alert]
 failed to run healthcheck cycle
@@ -331,8 +377,21 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
+
             local hc = require "resty.upstream.healthcheck"
             ngx.print(hc.status_page())
+
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
+        ';
+    }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
         ';
     }
 --- request
@@ -345,6 +404,8 @@ Upstream foo.com
         127.0.0.1:12355 DOWN
     Backup Peers
         127.0.0.1:12356 up
+upstream addr: 127.0.0.1:12354
+upstream addr: 127.0.0.1:12354
 --- no_error_log
 [alert]
 failed to run healthcheck cycle
@@ -422,10 +483,24 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
+
             local hc = require "resty.upstream.healthcheck"
             ngx.print(hc.status_page())
+
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
         ';
     }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
+        ';
+    }
+
 --- request
 GET /t
 
@@ -436,6 +511,8 @@ Upstream foo.com
         127.0.0.1:12355 up
     Backup Peers
         127.0.0.1:12356 up
+upstream addr: 127.0.0.1:12355
+upstream addr: 127.0.0.1:12355
 --- no_error_log
 [alert]
 failed to run healthcheck cycle
@@ -524,10 +601,24 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
+
             local hc = require "resty.upstream.healthcheck"
             ngx.print(hc.status_page())
+
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
         ';
     }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
+        ';
+    }
+
 --- request
 GET /t
 
@@ -538,6 +629,9 @@ Upstream foo.com
         127.0.0.1:12355 up
     Backup Peers
         127.0.0.1:12356 up
+upstream addr: 127.0.0.1:12354
+upstream addr: 127.0.0.1:12355
+
 --- no_error_log
 [alert]
 failed to run healthcheck cycle
@@ -625,8 +719,21 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
+
             local hc = require "resty.upstream.healthcheck"
             ngx.print(hc.status_page())
+
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
+        ';
+    }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
         ';
     }
 --- request
@@ -639,6 +746,9 @@ Upstream foo.com
         127.0.0.1:12355 up
     Backup Peers
         127.0.0.1:12356 up
+upstream addr: 127.0.0.1:12354
+upstream addr: 127.0.0.1:12355
+
 --- no_error_log
 [error]
 [alert]
@@ -714,8 +824,21 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
+
             local hc = require "resty.upstream.healthcheck"
             ngx.print(hc.status_page())
+
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
+        ';
+    }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
         ';
     }
 --- request
@@ -728,6 +851,9 @@ Upstream foo.com
         127.0.0.1:12355 up
     Backup Peers
         127.0.0.1:12356 up
+upstream addr: 127.0.0.1:12355
+upstream addr: 127.0.0.1:12355
+
 --- error_log
 failed to connect to 127.0.0.1:12354: connection refused
 --- no_error_log
