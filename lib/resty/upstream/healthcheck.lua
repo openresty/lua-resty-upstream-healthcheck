@@ -12,6 +12,8 @@ local shared = ngx.shared
 local debug_mode = ngx.config.debug
 local worker_pid = ngx.worker.pid
 local concat = table.concat
+local tonumber = tonumber
+local ipairs = ipairs
 
 local _M = {
     _VERSION = '0.01'
@@ -129,8 +131,8 @@ local function peer_fail(ctx, is_backup, id, peer)
         end
     end
 
-    print("ctx fall: ", ctx.fall, ", peer down: ", peer.down,
-          ", fails: ", fails)
+    -- print("ctx fall: ", ctx.fall, ", peer down: ", peer.down,
+          -- ", fails: ", fails)
 
     if not peer.down and fails >= ctx.fall then
         warn("peer ", peer.name, " is turned down after ", fails,
@@ -453,7 +455,7 @@ function _M.spawn_checker(opts)
     if valid_statuses then
         statuses = new_tab(0, #valid_statuses)
         for _, status in ipairs(valid_statuses) do
-            print("found good status ", status)
+            -- print("found good status ", status)
             statuses[status] = true
         end
     end
