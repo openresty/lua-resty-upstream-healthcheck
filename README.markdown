@@ -3,6 +3,24 @@ Name
 
 lua-resty-upstream-healthcheck - Health-checker for Nginx upstream servers
 
+Table of Contents
+=================
+
+* [Name](#name)
+* [Status](#status)
+* [Synopsis](#synopsis)
+* [Description](#description)
+* [Methods](#methods)
+* [Installation](#installation)
+* [TODO](#todo)
+* [Community](#community)
+    * [English Mailing List](#english-mailing-list)
+    * [Chinese Mailing List](#chinese-mailing-list)
+* [Bugs and Patches](#bugs-and-patches)
+* [Author](#author)
+* [Copyright and License](#copyright-and-license)
+* [See Also](#see-also)
+
 Status
 ======
 
@@ -52,11 +70,38 @@ http {
 Description
 ===========
 
+[Back to TOC](#table-of-contents)
+
 Methods
 =======
 
+[Back to TOC](#table-of-contents)
+
+Installation
+============
+
+You need to compile both the [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) and [ngx_lua_upstream](https://github.com/agentzh/lua-upstream-nginx-module) modules into your Nginx.
+
+The latest git master branch of [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) is required.
+
+You need to configure
+the [lua_package_path](http://wiki.nginx.org/HttpLuaModule#lua_package_path) directive to
+add the path of your `lua-resty-upstream-healthcheck` source tree to [ngx_lua](https://github.com/chaoslawful/lua-nginx-module)'s Lua module search path, as in
+
+```nginx
+# nginx.conf
+http {
+    lua_package_path "/path/to/lua-resty-upstream-healthcheck/lib/?.lua;;";
+    ...
+}
+```
+
+[Back to TOC](#table-of-contents)
+
 TODO
 ====
+
+[Back to TOC](#table-of-contents)
 
 Community
 =========
