@@ -369,7 +369,7 @@ local function do_check(ctx)
     end
 
     local new_ver = ctx.new_version
-    if new_ver then
+    if new_ver and new_ver ~= 0 then
         local key = "v:" .. ctx.upstream
         local dict = ctx.dict
 

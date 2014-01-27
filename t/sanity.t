@@ -112,7 +112,6 @@ failed to run healthcheck cycle
 qr/^healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
-publishing peers version 0
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
@@ -201,7 +200,6 @@ healthcheck: failed to connect to 127.0.0.1:12356: connection refused
 qr/^healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
-publishing peers version 0
 healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
@@ -504,7 +502,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
-){1,2}$/
+){0,2}$/
 
 
 
