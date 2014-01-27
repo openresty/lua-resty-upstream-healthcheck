@@ -44,8 +44,8 @@ http {
     lua_shared_dict healthcheck 1m;
 
     init_worker_by_lua '
-        local healthcheck = require "resty.upstream.healthcheck"
-        local ok, err = healthcheck.spawn_checker{
+        local hc = require "resty.upstream.healthcheck"
+        local ok, err = hc.spawn_checker{
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
             type = "http",
@@ -63,6 +63,18 @@ http {
 
     server {
         ...
+        location = /status {
+            access_log off;
+            allow 127.0.0.1;
+            deny all;
+
+            default_type text/plain;
+            content_by_lua '
+                local hc = require "resty.upstream.healthcheck"
+                ngx.say("worker pid: ", ngx.worker.pid())
+                ngx.print(hc.status_page())
+            ';
+        }
     }
 }
 ```

@@ -11,6 +11,7 @@ local new_timer = ngx.timer.at
 local shared = ngx.shared
 local debug_mode = ngx.config.debug
 local worker_pid = ngx.worker.pid
+local concat = table.concat
 
 local _M = {
     _VERSION = '0.01'
@@ -36,6 +37,7 @@ end
 local set_peer_down = upstream.set_peer_down
 local get_primary_peers = upstream.get_primary_peers
 local get_backup_peers = upstream.get_backup_peers
+local get_upstreams = upstream.get_upstreams
 
 local function info(...)
     log(INFO, "healthcheck: ", ...)
@@ -513,6 +515,66 @@ function _M.spawn_checker(opts)
     end
 
     return true
+end
+
+local function gen_peers_status_info(peers, bits, idx)
+    local npeers = #peers
+    for i = 1, npeers do
+        local peer = peers[i]
+        bits[idx] = "        "
+        bits[idx + 1] = peer.name
+        if peer.down then
+            bits[idx + 2] = " DOWN\n"
+        else
+            bits[idx + 2] = " up\n"
+        end
+        idx = idx + 3
+    end
+    return idx
+end
+
+function _M.status_page()
+    -- generate an HTML page
+    local us, err = get_upstreams()
+    if not us then
+        return "failed to get upstream names: " .. err
+    end
+
+    local n = #us
+    local bits = new_tab(n * 20, 0)
+    local idx = 1
+    for i = 1, n do
+        if i > 1 then
+            bits[idx] = "\n"
+            idx = idx + 1
+        end
+
+        local u = us[i]
+        bits[idx] = "Upstream "
+        bits[idx + 1] = u
+        bits[idx + 2] = "\n    Primary Peers\n"
+        idx = idx + 3
+
+        local peers, err = get_primary_peers(u)
+        if not peers then
+            return "failed to get primary peers in upstream " .. u .. ": "
+                   .. err
+        end
+
+        idx = gen_peers_status_info(peers, bits, idx)
+
+        bits[idx] = "    Backup Peers\n"
+        idx = idx + 1
+
+        peers, err = get_backup_peers(u)
+        if not peers then
+            return "failed to get backup peers in upstream " .. u .. ": "
+                   .. err
+        end
+
+        idx = gen_peers_status_info(peers, bits, idx)
+    end
+    return concat(bits)
 end
 
 return _M

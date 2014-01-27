@@ -17,7 +17,7 @@ our $HttpConfig = <<_EOC_;
     lua_package_path "$pwd/../lua-resty-lock/?.lua;$pwd/lib/?.lua;$pwd/t/lib/?.lua;;";
 _EOC_
 
-#no_diff();
+no_diff();
 no_long_string();
 run_tests();
 
@@ -77,30 +77,21 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
-            local upstream = require "ngx.upstream"
-            local ljson = require "ljson"
-            local u = "foo.com"
-            local peers, err = upstream.get_primary_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
-
-            peers, err = upstream.get_backup_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
         ';
     }
 --- request
 GET /t
 
 --- response_body
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12354","weight":1},{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":1,"max_fails":1,"name":"127.0.0.1:12355","weight":1}]
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12356","weight":1}]
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 up
+    Backup Peers
+        127.0.0.1:12356 up
+
 --- no_error_log
 [error]
 [alert]
@@ -166,30 +157,21 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
-            local upstream = require "ngx.upstream"
-            local ljson = require "ljson"
-            local u = "foo.com"
-            local peers, err = upstream.get_primary_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
-
-            peers, err = upstream.get_backup_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
         ';
     }
 --- request
 GET /t
 
 --- response_body
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12354","weight":1},{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":1,"max_fails":1,"name":"127.0.0.1:12355","weight":1}]
-[{"current_weight":0,"down":true,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12356","weight":1}]
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 up
+    Backup Peers
+        127.0.0.1:12356 DOWN
+
 --- no_error_log
 [alert]
 failed to run healthcheck cycle
@@ -259,31 +241,20 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
-            local upstream = require "ngx.upstream"
-            local ljson = require "ljson"
-            local u = "foo.com"
-
-            local peers, err = upstream.get_primary_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
-
-            peers, err = upstream.get_backup_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
         ';
     }
 --- request
 GET /t
 
 --- response_body
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12354","weight":1},{"current_weight":0,"down":true,"effective_weight":1,"fail_timeout":10,"fails":0,"id":1,"max_fails":1,"name":"127.0.0.1:12355","weight":1}]
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12356","weight":1}]
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 DOWN
+    Backup Peers
+        127.0.0.1:12356 up
 --- no_error_log
 [alert]
 failed to run healthcheck cycle
@@ -360,30 +331,20 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
-            local upstream = require "ngx.upstream"
-            local ljson = require "ljson"
-            local u = "foo.com"
-            local peers, err = upstream.get_primary_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
-
-            peers, err = upstream.get_backup_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
         ';
     }
 --- request
 GET /t
 
 --- response_body
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12354","weight":1},{"current_weight":0,"down":true,"effective_weight":1,"fail_timeout":10,"fails":0,"id":1,"max_fails":1,"name":"127.0.0.1:12355","weight":1}]
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12356","weight":1}]
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 DOWN
+    Backup Peers
+        127.0.0.1:12356 up
 --- no_error_log
 [alert]
 failed to run healthcheck cycle
@@ -401,7 +362,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
-){2,4}$/
+){1,4}$/
 
 
 
@@ -461,30 +422,20 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
-            local upstream = require "ngx.upstream"
-            local ljson = require "ljson"
-            local u = "foo.com"
-            local peers, err = upstream.get_primary_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
-
-            peers, err = upstream.get_backup_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
         ';
     }
 --- request
 GET /t
 
 --- response_body
-[{"current_weight":0,"down":true,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12354","weight":1},{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":1,"max_fails":1,"name":"127.0.0.1:12355","weight":1}]
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12356","weight":1}]
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 DOWN
+        127.0.0.1:12355 up
+    Backup Peers
+        127.0.0.1:12356 up
 --- no_error_log
 [alert]
 failed to run healthcheck cycle
@@ -573,30 +524,20 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
-            local upstream = require "ngx.upstream"
-            local ljson = require "ljson"
-            local u = "foo.com"
-            local peers, err = upstream.get_primary_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
-
-            peers, err = upstream.get_backup_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
         ';
     }
 --- request
 GET /t
 
 --- response_body
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12354","weight":1},{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":1,"max_fails":1,"name":"127.0.0.1:12355","weight":1}]
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12356","weight":1}]
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 up
+    Backup Peers
+        127.0.0.1:12356 up
 --- no_error_log
 [alert]
 failed to run healthcheck cycle
@@ -684,30 +625,20 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
-            local upstream = require "ngx.upstream"
-            local ljson = require "ljson"
-            local u = "foo.com"
-            local peers, err = upstream.get_primary_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
-
-            peers, err = upstream.get_backup_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
         ';
     }
 --- request
 GET /t
 
 --- response_body
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12354","weight":1},{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":1,"max_fails":1,"name":"127.0.0.1:12355","weight":1}]
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12356","weight":1}]
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 up
+    Backup Peers
+        127.0.0.1:12356 up
 --- no_error_log
 [error]
 [alert]
@@ -783,30 +714,20 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
-            local upstream = require "ngx.upstream"
-            local ljson = require "ljson"
-            local u = "foo.com"
-            local peers, err = upstream.get_primary_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
-
-            peers, err = upstream.get_backup_peers(u)
-            if not peers then
-                ngx.say("failed to get peers: ", err)
-                return
-            end
-            ngx.say(ljson.encode(peers))
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
         ';
     }
 --- request
 GET /t
 
 --- response_body
-[{"current_weight":0,"down":true,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12354","weight":1},{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":1,"max_fails":1,"name":"127.0.0.1:12355","weight":1}]
-[{"current_weight":0,"effective_weight":1,"fail_timeout":10,"fails":0,"id":0,"max_fails":1,"name":"127.0.0.1:12356","weight":1}]
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 DOWN
+        127.0.0.1:12355 up
+    Backup Peers
+        127.0.0.1:12356 up
 --- error_log
 failed to connect to 127.0.0.1:12354: connection refused
 --- no_error_log
