@@ -76,7 +76,7 @@ http {
             default_type text/plain;
             content_by_lua '
                 local hc = require "resty.upstream.healthcheck"
-                ngx.say("worker pid: ", ngx.worker.pid())
+                ngx.say("Nginx Worker PID: ", ngx.worker.pid())
                 ngx.print(hc.status_page())
             ';
         }
