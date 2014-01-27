@@ -31,7 +31,7 @@ http {
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
             type = "http",
-            http_req = [[GET /status HTTP/1.0\\r\\nHost: foo.com\\r\\n\\r\\n]],
+            http_req = [[GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n]],
             interval = 2000,  -- 2 sec
             timeout = 1000,   -- 1 sec
             fall = 3,
