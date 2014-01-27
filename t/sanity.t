@@ -318,7 +318,7 @@ init_worker_by_lua '
         http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
         interval = 100,  -- 100ms
         fall = 2,
-        good_statuses = {200, 503},
+        valid_statuses = {200, 503},
     }
     if not ok then
         ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
@@ -511,7 +511,7 @@ init_worker_by_lua '
         interval = 100,  -- 100ms
         fall = 1,
         rise = 2,
-        good_statuses = {200, 503},
+        valid_statuses = {200, 503},
     }
     if not ok then
         ngx.log(ngx.ERR, "failed to spawn health checker: ", err)

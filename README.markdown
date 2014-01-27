@@ -26,6 +26,8 @@ Status
 
 This library is still under early development and is still experimental.
 
+The API is still in flux.
+
 Synopsis
 ========
 
@@ -49,11 +51,12 @@ http {
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
             type = "http",
-            http_req = [[GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n]],
-            interval = 2000,  -- 2 sec
-            timeout = 1000,   -- 1 sec
-            fall = 3,
-            rise = 2,
+            http_req = [[GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n]],  -- raw HTTP request for checking
+            interval = 2000,  -- run the check cycle every 2 sec
+            timeout = 1000,   -- 1 sec is the timeout for network operations
+            fall = 3,  -- # of successive failures before turning a peer down
+            rise = 2,  -- # of successive successes before turning a peer up
+            valid_statuses = {200, 302},  -- a list valid HTTP status code
         }
         if not ok then
             ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
@@ -63,6 +66,8 @@ http {
 
     server {
         ...
+
+        # status page for all the peers:
         location = /status {
             access_log off;
             allow 127.0.0.1;

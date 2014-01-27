@@ -448,11 +448,11 @@ function _M.spawn_checker(opts)
         interval = interval / 1000
     end
 
-    local good_statuses = opts.good_statuses
+    local valid_statuses = opts.valid_statuses
     local statuses
-    if good_statuses then
-        statuses = new_tab(0, #good_statuses)
-        for _, status in ipairs(good_statuses) do
+    if valid_statuses then
+        statuses = new_tab(0, #valid_statuses)
+        for _, status in ipairs(valid_statuses) do
             print("found good status ", status)
             statuses[status] = true
         end
