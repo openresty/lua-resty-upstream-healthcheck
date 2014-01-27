@@ -1,0 +1,121 @@
+Name
+====
+
+lua-resty-upstream-healthcheck - Health-checker for Nginx upstream servers
+
+Status
+======
+
+This library is still under early development and is still experimental.
+
+Synopsis
+========
+
+```nginx
+http {
+    lua_package_path "/path/to/lua-resty-upstream-healthcheck/lib/?.lua;;";
+
+    # sample upstream block:
+    upstream foo.com {
+        server 127.0.0.1:12354;
+        server 127.0.0.1:12355;
+        server 127.0.0.1:12356 backup;
+    }
+
+    # the size depends on the number of servers in upstream {}:
+    lua_shared_dict healthcheck 1m;
+
+    init_worker_by_lua '
+        local healthcheck = require "resty.upstream.healthcheck"
+        local ok, err = healthcheck.spawn_checker{
+            shm = "healthcheck",  -- defined by "lua_shared_dict"
+            upstream = "foo.com", -- defined by "upstream"
+            type = "http",
+            http_req = [[GET /status HTTP/1.0\\r\\nHost: foo.com\\r\\n\\r\\n]],
+            interval = 2000,  -- 2 sec
+            timeout = 1000,   -- 1 sec
+            fall = 3,
+            rise = 2,
+        }
+        if not ok then
+            ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+            return
+        end
+    ';
+
+    server {
+        ...
+    }
+}
+```
+
+Description
+===========
+
+Methods
+=======
+
+TODO
+====
+
+Community
+=========
+
+[Back to TOC](#table-of-contents)
+
+English Mailing List
+--------------------
+
+The [openresty-en](https://groups.google.com/group/openresty-en) mailing list is for English speakers.
+
+[Back to TOC](#table-of-contents)
+
+Chinese Mailing List
+--------------------
+
+The [openresty](https://groups.google.com/group/openresty) mailing list is for Chinese speakers.
+
+[Back to TOC](#table-of-contents)
+
+Bugs and Patches
+================
+
+Please report bugs or submit patches by
+
+1. creating a ticket on the [GitHub Issue Tracker](http://github.com/agentzh/lua-resty-lock/issues),
+1. or posting to the [OpenResty community](#community).
+
+[Back to TOC](#table-of-contents)
+
+Author
+======
+
+Yichun "agentzh" Zhang (章亦春) <agentzh@gmail.com>, CloudFlare Inc.
+
+[Back to TOC](#table-of-contents)
+
+Copyright and License
+=====================
+
+This module is licensed under the BSD license.
+
+Copyright (C) 2014, by Yichun "agentzh" Zhang, CloudFlare Inc.
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+[Back to TOC](#table-of-contents)
+
+See Also
+========
+* the ngx_lua module: http://wiki.nginx.org/HttpLuaModule
+* OpenResty: http://openresty.org
+[Back to TOC](#table-of-contents)
+
