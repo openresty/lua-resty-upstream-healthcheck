@@ -105,7 +105,7 @@ You need to compile both the [ngx_lua](https://github.com/chaoslawful/lua-nginx-
 The latest git master branch of [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) is required.
 
 You need to configure
-the [lua_package_path](http://wiki.nginx.org/HttpLuaModule#lua_package_path) directive to
+the [lua_package_path](https://github.com/chaoslawful/lua-nginx-module#lua_package_path) directive to
 add the path of your `lua-resty-upstream-healthcheck` source tree to [ngx_lua](https://github.com/chaoslawful/lua-nginx-module)'s Lua module search path, as in
 
 ```nginx
