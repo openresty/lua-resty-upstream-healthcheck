@@ -180,7 +180,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 See Also
 ========
-* the ngx_lua module: http://wiki.nginx.org/HttpLuaModule
+* the ngx_lua module: https://github.com/chaoslawful/lua-nginx-module
+* the ngx_lua_upstream module: https://github.com/agentzh/lua-upstream-nginx-module
 * OpenResty: http://openresty.org
 [Back to TOC](#table-of-contents)
 
