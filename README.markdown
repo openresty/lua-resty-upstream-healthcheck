@@ -59,6 +59,7 @@ http {
             fall = 3,  -- # of successive failures before turning a peer down
             rise = 2,  -- # of successive successes before turning a peer up
             valid_statuses = {200, 302},  -- a list valid HTTP status code
+            concurrency = 10,  -- concurrency level for test requests
         }
         if not ok then
             ngx.log(ngx.ERR, "failed to spawn health checker: ", err)

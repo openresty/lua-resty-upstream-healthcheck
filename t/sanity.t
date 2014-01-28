@@ -9,7 +9,7 @@ use Cwd qw(cwd);
 
 #repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6 + 1);
+plan tests => repeat_each() * (blocks() * 6 + 9);
 
 my $pwd = cwd();
 
@@ -874,4 +874,129 @@ publishing peers version 2
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 ){3,5}$/
+
+
+
+=== TEST 9: concurrency == 2 (odd number of peers)
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+    server 127.0.0.1:12355;
+    server 127.0.0.1:12356;
+    server 127.0.0.1:12357;
+    server 127.0.0.1:12358;
+    server 127.0.0.1:12359 backup;
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "http",
+        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        interval = 100,  -- 100ms
+        fall = 2,
+        concurrency = 2,
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+            ngx.say("ok")
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+ok
+--- no_error_log
+[alert]
+failed to run healthcheck cycle
+--- error_log
+healthcheck: peer 127.0.0.1:12354 is turned down after 2 failure(s)
+healthcheck: peer 127.0.0.1:12355 is turned down after 2 failure(s)
+healthcheck: peer 127.0.0.1:12356 is turned down after 2 failure(s)
+healthcheck: peer 127.0.0.1:12357 is turned down after 2 failure(s)
+healthcheck: peer 127.0.0.1:12358 is turned down after 2 failure(s)
+healthcheck: peer 127.0.0.1:12359 is turned down after 2 failure(s)
+--- grep_error_log eval: qr/spawn a thread checking .* peer.*|check .*? peer.*/
+--- grep_error_log_out eval
+qr/^(?:spawn a thread checking primary peers 0 to 2
+check primary peers 3 to 4
+check backup peer 0
+){4,6}$/
+
+
+
+=== TEST 10: concurrency == 3 (odd number of peers)
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+    server 127.0.0.1:12355;
+    server 127.0.0.1:12356;
+    server 127.0.0.1:12359 backup;
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "http",
+        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        interval = 100,  -- 100ms
+        fall = 2,
+        concurrency = 3,
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+            ngx.say("ok")
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+ok
+--- no_error_log
+[alert]
+failed to run healthcheck cycle
+--- error_log
+healthcheck: peer 127.0.0.1:12354 is turned down after 2 failure(s)
+healthcheck: peer 127.0.0.1:12355 is turned down after 2 failure(s)
+healthcheck: peer 127.0.0.1:12356 is turned down after 2 failure(s)
+healthcheck: peer 127.0.0.1:12359 is turned down after 2 failure(s)
+--- grep_error_log eval: qr/spawn a thread checking .* peer.*|check .*? peer.*/
+--- grep_error_log_out eval
+qr/^(?:spawn a thread checking primary peer 0
+spawn a thread checking primary peer 1
+check primary peer 2
+check backup peer 0
+){4,6}$/
 

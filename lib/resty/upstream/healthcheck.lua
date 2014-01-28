@@ -14,6 +14,10 @@ local worker_pid = ngx.worker.pid
 local concat = table.concat
 local tonumber = tonumber
 local ipairs = ipairs
+local ceil = math.ceil
+local fmod = math.fmod
+local spawn = ngx.thread.spawn
+local wait = ngx.thread.wait
 
 local _M = {
     _VERSION = '0.01'
@@ -267,15 +271,99 @@ local function check_peer(ctx, id, peer, is_backup)
     end
 end
 
+local function check_peer_range(ctx, from, to, peers, is_backup)
+    for i = from, to do
+        check_peer(ctx, i - 1, peers[i], is_backup)
+    end
+end
+
 local function check_peers(ctx, peers, is_backup)
     local statuses = ctx.statuses
     local req = ctx.http_req
 
-    -- TODO: we should use multiple "light threads" here
-    -- to reduce total latencies.
     local n = #peers
-    for i = 1, n do
-        check_peer(ctx, i - 1, peers[i], is_backup)
+    if n == 0 then
+        return
+    end
+
+    local concur = ctx.concurrency
+    if concur <= 1 then
+        for i = 1, n do
+            check_peer(ctx, i - 1, peers[i], is_backup)
+        end
+    else
+        local threads
+        local nthr
+
+        if n <= concur then
+            nthr = n - 1
+            threads = new_tab(nthr, 0)
+            for i = 1, nthr do
+
+                if debug_mode then
+                    debug("spawn a thread checking ",
+                          is_backup and "backup" or "primary", " peer ", i - 1)
+                end
+
+                threads[i] = spawn(check_peer, ctx, i - 1, peers[i], is_backup)
+            end
+            -- use the current "light thread" to run the last task
+            if debug_mode then
+                debug("check ", is_backup and "backup" or "primary", " peer ",
+                      n - 1)
+            end
+            check_peer(ctx, n - 1, peers[n], is_backup)
+
+        else
+            local group_size = ceil(n / concur)
+            local nthr = ceil(n / group_size) - 1
+
+            threads = new_tab(nthr, 0)
+            local from = 1
+            local rest = n
+            for i = 1, nthr do
+                local to
+                if rest >= group_size then
+                    rest = rest - group_size
+                    to = from + group_size - 1
+                else
+                    rest = 0
+                    to = from + rest - 1
+                end
+
+                if debug_mode then
+                    debug("spawn a thread checking ",
+                          is_backup and "backup" or "primary", " peers ",
+                          from - 1, " to ", to - 1)
+                end
+
+                threads[i] = spawn(check_peer_range, ctx, from, to, peers,
+                                   is_backup)
+                from = from + group_size
+                if rest == 0 then
+                    break
+                end
+            end
+            if rest > 0 then
+                local to = from + rest - 1
+
+                if debug_mode then
+                    debug("check ", is_backup and "backup" or "primary",
+                          " peers ", from - 1, " to ", to - 1)
+                end
+
+                check_peer_range(ctx, from, to, peers, is_backup)
+            end
+        end
+
+        if nthr and nthr > 0 then
+            for i = 1, nthr do
+                local t = threads[i]
+                if t then
+                    wait(t)
+                end
+            end
+        end
     end
 end
 
@@ -462,6 +550,11 @@ function _M.spawn_checker(opts)
 
     -- debug("interval: ", interval)
 
+    local concur = opts.concurrency
+    if not concur then
+        concur = 1
+    end
+
     local fall = opts.fall
     if not fall then
         fall = 5
@@ -509,6 +602,7 @@ function _M.spawn_checker(opts)
         rise = rise,
         statuses = statuses,
         version = 0,
+        concurrency = concur,
     }
 
     local ok, err = new_timer(0, check, ctx)
