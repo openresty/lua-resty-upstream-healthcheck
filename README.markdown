@@ -47,6 +47,7 @@ http {
 
     init_worker_by_lua '
         local hc = require "resty.upstream.healthcheck"
+
         local ok, err = hc.spawn_checker{
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
@@ -65,6 +66,9 @@ http {
             ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
             return
         end
+
+        -- Just call hc.spawn_checker() for more times here if you have
+        -- more upstream groups to monitor. One call for one upstream group.
     ';
 
     server {
