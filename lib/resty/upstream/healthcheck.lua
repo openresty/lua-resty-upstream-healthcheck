@@ -79,8 +79,8 @@ local function set_peer_down_globally(ctx, is_backup, id, value)
         errlog("failed to set peer down: ", err)
     end
 
-    if not ctx.new_version or ctx.new_version == ctx.version then
-        ctx.new_version = ctx.version + 1
+    if not ctx.new_version then
+        ctx.new_version = true
     end
 
     local key = gen_peer_key("d:", u, is_backup, id)
@@ -407,7 +407,9 @@ local function check_peers_updates(ctx)
             return
         end
 
-        ctx.new_version = ctx.version
+        if ctx.version > 0 then
+            ctx.new_version = true
+        end
 
     elseif ctx.version < ver then
         debug("upgrading peers version to ", ver)
@@ -460,16 +462,20 @@ local function do_check(ctx)
         release_lock(ctx)
     end
 
-    local new_ver = ctx.new_version
-    if new_ver and new_ver ~= 0 then
+    if ctx.new_version then
         local key = "v:" .. ctx.upstream
         local dict = ctx.dict
 
-        debug("publishing peers version ", new_ver)
-        local ver, err = dict:set(key, new_ver)
-        if not ver then
-            errlog("failed to set peers version: ", err)
+        if debug_mode then
+            debug("publishing peers version ", ctx.version + 1)
         end
+
+        dict:add(key, 0)
+        local new_ver, err = dict:incr(key, 1)
+        if not new_ver then
+            errlog("failed to publish new peers version: ", err)
+        end
+
         ctx.version = new_ver
         ctx.new_version = nil
     end
