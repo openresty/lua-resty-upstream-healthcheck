@@ -52,3 +52,10 @@
     fun:ngx_master_process_cycle
     fun:main
 }
+{
+    <insert_a_suppression_name_here>
+    Memcheck:Cond
+    fun:ngx_init_cycle
+    fun:ngx_master_process_cycle
+    fun:main
+}
