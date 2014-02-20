@@ -36,7 +36,7 @@ if not ok then
 end
 
 local ok, new_tab = pcall(require, "table.new")
-if not ok then
+if not ok or type(new_tab) ~= "function" then
     new_tab = function (narr, nrec) return {} end
 end
 
