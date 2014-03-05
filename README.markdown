@@ -24,9 +24,7 @@ Table of Contents
 Status
 ======
 
-This library is still under early development and is still experimental.
-
-The API is still in flux.
+This library is still under early development but is already production ready.
 
 Synopsis
 ========
