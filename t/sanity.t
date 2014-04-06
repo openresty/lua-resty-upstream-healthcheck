@@ -14,6 +14,7 @@ plan tests => repeat_each() * (blocks() * 6 + 9);
 my $pwd = cwd();
 
 our $HttpConfig = <<_EOC_;
+    lua_socket_log_errors off;
     lua_package_path "$pwd/../lua-resty-lock/?.lua;$pwd/lib/?.lua;$pwd/t/lib/?.lua;;";
 _EOC_
 

@@ -43,6 +43,8 @@ http {
     # the size depends on the number of servers in upstream {}:
     lua_shared_dict healthcheck 1m;
 
+    lua_socket_log_errors off;
+
     init_worker_by_lua '
         local hc = require "resty.upstream.healthcheck"
 
