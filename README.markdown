@@ -52,7 +52,10 @@ http {
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
             type = "http",
-            http_req = [[GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n]],
+
+            -- if you put this Lua snippet in separate .lua file,
+            -- then you should write this instead: http_req = "GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n",
+            http_req = "GET /status HTTP/1.0\\r\\nHost: foo.com\\r\\n\\r\\n",
                     -- raw HTTP request for checking
 
             interval = 2000,  -- run the check cycle every 2 sec
