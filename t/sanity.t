@@ -9,7 +9,7 @@ use Cwd qw(cwd);
 
 #repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6 + 9);
+plan tests => repeat_each() * (blocks() * 6 + 8);
 
 my $pwd = cwd();
 
@@ -63,7 +63,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         fall = 2,
     }
@@ -158,7 +158,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         fall = 2,
     }
@@ -257,7 +257,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         fall = 2,
     }
@@ -362,7 +362,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         fall = 2,
         valid_statuses = {200, 503},
@@ -468,7 +468,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         timeout = 100,  -- 100ms
         fall = 2,
@@ -585,7 +585,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         fall = 1,
         rise = 2,
@@ -705,7 +705,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         fall = 2,
     }
@@ -810,7 +810,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         fall = 2,
     }
@@ -899,7 +899,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         fall = 2,
         concurrency = 2,
@@ -961,7 +961,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = [[GET /status HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n]],
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         fall = 2,
         concurrency = 3,
@@ -1000,4 +1000,74 @@ spawn a thread checking primary peer 1
 check primary peer 2
 check backup peer 0
 ){4,6}$/
+
+
+
+=== TEST 11: health check (good case), status ignored by default
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:7983;
+}
+
+server {
+    listen 12356;
+    location = /status {
+        return 503;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "http",
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 1,
+        valid_statuses = {200},
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.12)
+
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
+        ';
+    }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
+        ';
+    }
+--- request
+GET /t
+
+--- tcp_listen: 7983
+--- tcp_query eval: "GET /status HTTP/1.0\r\nHost: localhost\r\n\r\n"
+--- tcp_reply
+<html>
+--- response_body
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:7983 DOWN
+    Backup Peers
+
+--- no_error_log
+[alert]
+bad argument #2 to 'sub' (number expected, got nil)
 

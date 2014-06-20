@@ -251,16 +251,17 @@ local function check_peer(ctx, id, peer, is_backup)
                                    status_line)
                         end
                         peer_fail(ctx, is_backup, id, peer)
-                    end
-                    local status = tonumber(sub(status_line, from, to))
-                    if not statuses[status] then
-                        if not peer.down then
-                            errlog("bad status code from ",
-                                   name, ": ", status)
-                        end
-                        peer_fail(ctx, is_backup, id, peer)
                     else
-                        peer_ok(ctx, is_backup, id, peer)
+                        local status = tonumber(sub(status_line, from, to))
+                        if not statuses[status] then
+                            if not peer.down then
+                                errlog("bad status code from ",
+                                       name, ": ", status)
+                            end
+                            peer_fail(ctx, is_backup, id, peer)
+                        else
+                            peer_ok(ctx, is_backup, id, peer)
+                        end
                     end
                 else
                     peer_ok(ctx, is_backup, id, peer)
