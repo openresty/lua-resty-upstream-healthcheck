@@ -72,6 +72,8 @@ http {
 
         -- Just call hc.spawn_checker() for more times here if you have
         -- more upstream groups to monitor. One call for one upstream group.
+        -- They can all share the same shm zone without conflicts but they
+        -- need a bigger shm zone for obvious reasons.
     ';
 
     server {
