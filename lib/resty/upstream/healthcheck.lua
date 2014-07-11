@@ -423,7 +423,12 @@ end
 local function get_lock(ctx)
     local dict = ctx.dict
     local key = "l:" .. ctx.upstream
-    local ok, err = dict:add(key, worker_pid(), ctx.interval * 3)
+
+    -- the lock is held for the whole interval to prevent multiple
+    -- worker processes from sending the test request simultaneously.
+    -- here we substract the lock expiration time by 1ms to prevent
+    -- a race condition with the next timer event.
+    local ok, err = dict:add(key, true, ctx.interval - 0.001)
     if not ok then
         if err == "exists" then
             return nil
@@ -434,24 +439,6 @@ local function get_lock(ctx)
     return true
 end
 
-local function release_lock(ctx)
-    local dict = ctx.dict
-    local key = "l:" .. ctx.upstream
-    local pid, err = dict:get(key)
-    if not pid then
-        if err then
-            errlog("failed to get key \"", key, "\": ", err)
-        end
-    else
-        if pid == worker_pid() then
-            local ok, err = dict:delete(key)
-            if not ok then
-                errlog("failed to delete key \"", key, "\": ", err)
-            end
-        end
-    end
-end
-
 local function do_check(ctx)
     debug("healthcheck: run a check cycle")
 
@@ -460,7 +447,6 @@ local function do_check(ctx)
     if get_lock(ctx) then
         check_peers(ctx, ctx.primary_peers, false)
         check_peers(ctx, ctx.backup_peers, true)
-        release_lock(ctx)
     end
 
     if ctx.new_version then
@@ -541,8 +527,12 @@ function _M.spawn_checker(opts)
     local interval = opts.interval
     if not interval then
         interval = 1
+
     else
         interval = interval / 1000
+        if interval < 0.002 then  -- minimum 2ms
+            interval = 0.002
+        end
     end
 
     local valid_statuses = opts.valid_statuses
