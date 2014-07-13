@@ -109,6 +109,8 @@ Methods
 Installation
 ============
 
+If you are using [OpenResty](http://openresty.org) 1.5.11.1 or later, then you should already have this library (and all of its dependencies) installed by default (and this is also the recommended way of using this library). Otherwise continue reading:
+
 You need to compile both the [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) and [ngx_lua_upstream](https://github.com/agentzh/lua-upstream-nginx-module) modules into your Nginx.
 
 The latest git master branch of [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) is required.
