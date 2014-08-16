@@ -20,7 +20,7 @@ local spawn = ngx.thread.spawn
 local wait = ngx.thread.wait
 
 local _M = {
-    _VERSION = '0.02'
+    _VERSION = '0.03'
 }
 
 if not ngx.config
