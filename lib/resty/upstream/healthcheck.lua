@@ -19,6 +19,15 @@ local fmod = math.fmod
 local spawn = ngx.thread.spawn
 local wait = ngx.thread.wait
 
+local http_descriptor = {}
+http_descriptor["1.0"] = {
+    delimiter_body = "\r\n"
+}
+
+http_descriptor["1.1"] = {
+    delimiter_body = "\r\n\r\n"
+}
+
 local _M = {
     _VERSION = '0.03'
 }
@@ -199,6 +208,25 @@ local function peer_ok(ctx, is_backup, id, peer)
     end
 end
 
+--- This method is used to detect if a http message body matches the expected body specified
+-- in an upstream healtcheck. If the expected_body is a contains expression (%) then it tries
+-- to read from socket till it gets the string from %%. Otherwise it does an exact read of bytes
+-- and compare the result with the expected body.
+local function is_expectedbody(socket, expected_body, http_version)
+    local readuntilnew = socket:receiveuntil(http_descriptor[http_version]["delimiter_body"])
+    local headers = readuntilnew()
+
+    if not string.find(expected_body, "%%") then
+        local body = socket:receive(string.len(expected_body))
+
+        return body == expected_body
+    end
+
+    expected_body = string.gsub(expected_body, "%%", "")
+
+    return socket:receiveuntil(expected_body)()    
+end
+
 local function check_peer(ctx, id, peer, is_backup)
     local u = ctx.upstream
     local ok, err
@@ -260,7 +288,17 @@ local function check_peer(ctx, id, peer, is_backup)
                             end
                             peer_fail(ctx, is_backup, id, peer)
                         else
-                            peer_ok(ctx, is_backup, id, peer)
+                            if ctx.expected_body then
+                                if not is_expectedbody(sock, ctx.expected_body, ctx.http_version) then
+                                    errlog(string.format("Received body from %s does not match %s",
+                                            name, ctx.expected_body))
+                                    peer_fail(ctx, is_backup, id, peer)        
+                                else
+                                    peer_ok(ctx, is_backup, id, peer)
+                                end
+                            else
+                                peer_ok(ctx, is_backup, id, peer)
+                            end
                         end
                     end
                 else
@@ -600,7 +638,13 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        http_version = opts.http_version or "1.1",
+        expected_body = opts.expected_body
     }
+
+    if ctx.http_version ~= "1.1" or ctx.http_version ~= "1.0" then 
+        ctx.http_version = "1.1"
+    end
 
     local ok, err = new_timer(0, check, ctx)
     if not ok then
