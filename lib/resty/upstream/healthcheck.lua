@@ -225,50 +225,65 @@ local function check_peer(ctx, id, peer, is_backup)
             errlog("failed to connect to ", name, ": ", err)
         end
         peer_fail(ctx, is_backup, id, peer)
-    else
-        local bytes, err = sock:send(req)
-        if not bytes then
+        return
+    end
+
+    if ctx.ssl then
+        local session, err = sock:sslhandshake(nil, name, ctx.ssl_verify)
+        if not session then
+            errlog("failed to do SSL handshake: ", name, ": ", err)
+            sock:close()
+            return
+        end
+    end
+
+    local bytes, err = sock:send(req)
+    if not bytes then
+        if not peer.down then
+            errlog("failed to send request to ", name, ": ", err)
+        end
+        peer_fail(ctx, is_backup, id, peer)
+        sock:close()
+        return
+    end
+
+    local status_line, err = sock:receive()
+    if not status_line then
+        if not peer.down then
+            errlog("failed to receive status line from ", name,
+                   ": ", err)
+        end
+        peer_fail(ctx, is_backup, id, peer)
+        sock:close()
+        return
+    end
+
+    sock:close()
+
+    if statuses then
+        local from, to, err = re_find(status_line,
+                                      [[^HTTP/\d+\.\d+\s+(\d+)]],
+                                      "joi", nil, 1)
+        if not from then
             if not peer.down then
-                errlog("failed to send request to ", name, ": ", err)
+                errlog("bad status line from ", name, ": ",
+                       status_line)
             end
             peer_fail(ctx, is_backup, id, peer)
         else
-            local status_line, err = sock:receive()
-            if not status_line then
+            local status = tonumber(sub(status_line, from, to))
+            if not statuses[status] then
                 if not peer.down then
-                    errlog("failed to receive status line from ", name,
-                           ": ", err)
+                    errlog("bad status code from ",
+                           name, ": ", status)
                 end
                 peer_fail(ctx, is_backup, id, peer)
             else
-                if statuses then
-                    local from, to, err = re_find(status_line,
-                                                  [[^HTTP/\d+\.\d+\s+(\d+)]],
-                                                  "joi", nil, 1)
-                    if not from then
-                        if not peer.down then
-                            errlog("bad status line from ", name, ": ",
-                                   status_line)
-                        end
-                        peer_fail(ctx, is_backup, id, peer)
-                    else
-                        local status = tonumber(sub(status_line, from, to))
-                        if not statuses[status] then
-                            if not peer.down then
-                                errlog("bad status code from ",
-                                       name, ": ", status)
-                            end
-                            peer_fail(ctx, is_backup, id, peer)
-                        else
-                            peer_ok(ctx, is_backup, id, peer)
-                        end
-                    end
-                else
-                    peer_ok(ctx, is_backup, id, peer)
-                end
+                peer_ok(ctx, is_backup, id, peer)
             end
-            sock:close()
         end
+    else
+        peer_ok(ctx, is_backup, id, peer)
     end
 end
 
@@ -519,6 +534,9 @@ function _M.spawn_checker(opts)
         return nil, "\"http_req\" option required"
     end
 
+    local ssl = opts.ssl and true
+    local ssl_verify = opts.ssl_verify and true
+
     local timeout = opts.timeout
     if not timeout then
         timeout = 1000
@@ -527,7 +545,6 @@ function _M.spawn_checker(opts)
     local interval = opts.interval
     if not interval then
         interval = 1
-
     else
         interval = interval / 1000
         if interval < 0.002 then  -- minimum 2ms
@@ -592,6 +609,8 @@ function _M.spawn_checker(opts)
         primary_peers = preprocess_peers(ppeers),
         backup_peers = preprocess_peers(bpeers),
         http_req = http_req,
+        ssl = ssl,
+        ssl_verify = ssl_verify,
         timeout = timeout,
         interval = interval,
         dict = dict,

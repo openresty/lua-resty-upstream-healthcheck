@@ -58,6 +58,9 @@ http {
             http_req = "GET /status HTTP/1.0\\r\\nHost: foo.com\\r\\n\\r\\n",
                     -- raw HTTP request for checking
 
+            ssl = false, -- use https
+            ssl_verify = true, -- verify SSL certs, see https://github.com/openresty/lua-nginx-module/pull/290
+
             interval = 2000,  -- run the check cycle every 2 sec
             timeout = 1000,   -- 1 sec is the timeout for network operations
             fall = 3,  -- # of successive failures before turning a peer down
