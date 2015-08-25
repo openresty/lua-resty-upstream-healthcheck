@@ -228,7 +228,7 @@ local function check_peer(ctx, id, peer, is_backup)
         return
     end
 
-    if ctx.ssl then
+    if ctx.type == "https" then
         local session, err = sock:sslhandshake(nil, name, ctx.ssl_verify)
         if not session then
             errlog("failed to do SSL handshake: ", name, ": ", err)
@@ -525,17 +525,16 @@ function _M.spawn_checker(opts)
         return nil, "\"type\" option required"
     end
 
-    if typ ~= "http" then
-        return nil, "only \"http\" type is supported right now"
+    if typ ~= "http" and typ ~= "https" then
+        return nil, "no support for this protocol type"
     end
+
+    local ssl_verify = opts.ssl_verify and true
 
     local http_req = opts.http_req
     if not http_req then
         return nil, "\"http_req\" option required"
     end
-
-    local ssl = opts.ssl and true
-    local ssl_verify = opts.ssl_verify and true
 
     local timeout = opts.timeout
     if not timeout then
@@ -608,9 +607,9 @@ function _M.spawn_checker(opts)
         upstream = u,
         primary_peers = preprocess_peers(ppeers),
         backup_peers = preprocess_peers(bpeers),
-        http_req = http_req,
-        ssl = ssl,
+        type = typ,
         ssl_verify = ssl_verify,
+        http_req = http_req,
         timeout = timeout,
         interval = interval,
         dict = dict,
