@@ -256,7 +256,7 @@ local function check_peer(ctx, id, peer, is_backup)
                         if not statuses[status] then
                             if not peer.down then
                                 errlog("bad status code from ",
-                                       name, ": ", status)
+                                       name, ": ", status_line)
                             end
                             peer_fail(ctx, is_backup, id, peer)
                         else
