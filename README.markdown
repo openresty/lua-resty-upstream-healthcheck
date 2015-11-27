@@ -51,12 +51,13 @@ http {
         local ok, err = hc.spawn_checker{
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
-            type = "http",
-
+            
+            type = "https",
+            ssl_verify = true, -- verify SSL certs, see https://github.com/openresty/lua-nginx-module/pull/290
+            
             -- if you put this Lua snippet in separate .lua file,
             -- then you should write this instead: http_req = "GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n",
-            http_req = "GET /status HTTP/1.0\\r\\nHost: foo.com\\r\\n\\r\\n",
-                    -- raw HTTP request for checking
+            http_req = "GET /status HTTP/1.0\\r\\nHost: foo.com\\r\\n\\r\\n", -- raw HTTP request for checking
 
             interval = 2000,  -- run the check cycle every 2 sec
             timeout = 1000,   -- 1 sec is the timeout for network operations
