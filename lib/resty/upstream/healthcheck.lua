@@ -13,11 +13,13 @@ local debug_mode = ngx.config.debug
 local worker_pid = ngx.worker.pid
 local concat = table.concat
 local tonumber = tonumber
+local tostring = tostring
 local ipairs = ipairs
 local ceil = math.ceil
 local fmod = math.fmod
 local spawn = ngx.thread.spawn
 local wait = ngx.thread.wait
+local pcall = pcall
 
 local _M = {
     _VERSION = '0.03'
