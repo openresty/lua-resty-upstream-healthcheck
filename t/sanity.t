@@ -123,6 +123,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 ){3,5}$/
+--- timeout: 6
 
 
 
@@ -222,6 +223,7 @@ publishing peers version 1
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
 ){2,4}$/
+--- timeout: 6
 
 
 
@@ -320,6 +322,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 ){2,4}$/
+--- timeout: 6
 
 
 
@@ -425,6 +428,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 ){1,4}$/
+--- timeout: 6
 
 
 
@@ -659,6 +663,7 @@ publishing peers version 2
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 ){1,3}$/
+--- timeout: 6
 
 
 
@@ -875,6 +880,7 @@ publishing peers version 2
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 ){3,5}$/
+--- timeout: 6
 
 
 
