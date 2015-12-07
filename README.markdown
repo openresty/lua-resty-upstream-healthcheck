@@ -45,7 +45,7 @@ http {
 
     lua_socket_log_errors off;
 
-    init_worker_by_lua '
+    init_worker_by_lua_block {
         local hc = require "resty.upstream.healthcheck"
 
         local ok, err = hc.spawn_checker{
@@ -53,9 +53,7 @@ http {
             upstream = "foo.com", -- defined by "upstream"
             type = "http",
 
-            -- if you put this Lua snippet in separate .lua file,
-            -- then you should write this instead: http_req = "GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n",
-            http_req = "GET /status HTTP/1.0\\r\\nHost: foo.com\\r\\n\\r\\n",
+            http_req = "GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n",
                     -- raw HTTP request for checking
 
             interval = 2000,  -- run the check cycle every 2 sec
@@ -74,7 +72,7 @@ http {
         -- more upstream groups to monitor. One call for one upstream group.
         -- They can all share the same shm zone without conflicts but they
         -- need a bigger shm zone for obvious reasons.
-    ';
+    }
 
     server {
         ...
@@ -86,11 +84,11 @@ http {
             deny all;
 
             default_type text/plain;
-            content_by_lua '
+            content_by_lua_block {
                 local hc = require "resty.upstream.healthcheck"
                 ngx.say("Nginx Worker PID: ", ngx.worker.pid())
                 ngx.print(hc.status_page())
-            ';
+            }
         }
     }
 }
@@ -109,7 +107,7 @@ Methods
 Installation
 ============
 
-If you are using [OpenResty](http://openresty.org) 1.5.11.1 or later, then you should already have this library (and all of its dependencies) installed by default (and this is also the recommended way of using this library). Otherwise continue reading:
+If you are using [OpenResty](http://openresty.org) 1.9.3.2 or later, then you should already have this library (and all of its dependencies) installed by default (and this is also the recommended way of using this library). Otherwise continue reading:
 
 You need to compile both the [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) and [ngx_lua_upstream](https://github.com/agentzh/lua-upstream-nginx-module) modules into your Nginx.
 
