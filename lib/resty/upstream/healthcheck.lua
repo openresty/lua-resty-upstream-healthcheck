@@ -32,20 +32,10 @@ then
     error("ngx_lua 0.9.5+ required")
 end
 
-local ok, upstream = pcall(require, "ngx.upstream")
-if not ok then
-    error("ngx_upstream_lua module required")
-end
-
 local ok, new_tab = pcall(require, "table.new")
 if not ok or type(new_tab) ~= "function" then
     new_tab = function (narr, nrec) return {} end
 end
-
-local set_peer_down = upstream.set_peer_down
-local get_primary_peers = upstream.get_primary_peers
-local get_backup_peers = upstream.get_backup_peers
-local get_upstreams = upstream.get_upstreams
 
 local function info(...)
     log(INFO, "healthcheck: ", ...)
@@ -76,7 +66,7 @@ end
 local function set_peer_down_globally(ctx, is_backup, id, value)
     local u = ctx.upstream
     local dict = ctx.dict
-    local ok, err = set_peer_down(u, is_backup, id, value)
+    local ok, err = ctx.set_peer_down(u, is_backup, id, value)
     if not ok then
         errlog("failed to set peer down: ", err)
     end
@@ -388,7 +378,7 @@ local function upgrade_peers_version(ctx, peers, is_backup)
             down = true
         end
         if (peer.down and not down) or (not peer.down and down) then
-            local ok, err = set_peer_down(u, is_backup, id, down)
+            local ok, err = ctx.set_peer_down(u, is_backup, id, down)
             if not ok then
                 errlog("failed to set peer down: ", err)
             else
@@ -490,6 +480,28 @@ check = function (premature, ctx)
     end
 end
 
+local function load_upstream_mgr(upstream_mgr)
+    upstream_mgr = upstream_mgr or "ngx.upstreams"
+
+    assert(type(upstream_mgr) == "string" or type(upstream_mgr == "table"),
+           "the upstream_mgr option must be a string (module name) or table (actual module)")
+
+    if type(upstream_mgr) == string then
+        local ok, upstream = pcall(require, upstream_mgr)
+        if not ok then
+            error('Could not load the required "'..upstream_mgr..'" module')
+        end
+        upstream_mgr = upstream
+    end
+
+    for _,fname in ipairs({"set_peer_down", "get_primary_peers",
+                          "get_backup_peers", "get_upstreams"}) do
+        assert(type(upstream_mgr[fname]) == "function", 'expected the "upstream_mgr" to have a "'..fname..'" function')
+    end
+
+    return upstream_mgr
+end
+
 local function preprocess_peers(peers)
     local n = #peers
     for i = 1, n do
@@ -579,12 +591,14 @@ function _M.spawn_checker(opts)
         return nil, "no upstream specified"
     end
 
-    local ppeers, err = get_primary_peers(u)
+    local upstream_mgr = load_upstream_mgr(opts.upstream_mgr)
+
+    local ppeers, err = upstream_mgr.get_primary_peers(u)
     if not ppeers then
         return nil, "failed to get primary peers: " .. err
     end
 
-    local bpeers, err = get_backup_peers(u)
+    local bpeers, err = upstream_mgr.get_backup_peers(u)
     if not bpeers then
         return nil, "failed to get backup peers: " .. err
     end
@@ -602,6 +616,7 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        set_peer_down = upstream_mgr.set_peer_down,
     }
 
     local ok, err = new_timer(0, check, ctx)
@@ -628,9 +643,10 @@ local function gen_peers_status_info(peers, bits, idx)
     return idx
 end
 
-function _M.status_page()
+function _M.status_page(opts)
     -- generate an HTML page
-    local us, err = get_upstreams()
+    local upstream_mgr = load_upstream_mgr(opts.upstream_mgr)
+    local us, err = upstream_mgr.get_upstreams()
     if not us then
         return "failed to get upstream names: " .. err
     end
@@ -650,7 +666,7 @@ function _M.status_page()
         bits[idx + 2] = "\n    Primary Peers\n"
         idx = idx + 3
 
-        local peers, err = get_primary_peers(u)
+        local peers, err = upstream_mgr.get_primary_peers(u)
         if not peers then
             return "failed to get primary peers in upstream " .. u .. ": "
                    .. err
@@ -661,7 +677,7 @@ function _M.status_page()
         bits[idx] = "    Backup Peers\n"
         idx = idx + 1
 
-        peers, err = get_backup_peers(u)
+        peers, err = upstream_mgr.get_backup_peers(u)
         if not peers then
             return "failed to get backup peers in upstream " .. u .. ": "
                    .. err
