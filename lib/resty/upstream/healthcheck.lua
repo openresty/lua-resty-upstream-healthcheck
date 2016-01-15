@@ -10,13 +10,11 @@ local re_find = ngx.re.find
 local new_timer = ngx.timer.at
 local shared = ngx.shared
 local debug_mode = ngx.config.debug
-local worker_pid = ngx.worker.pid
 local concat = table.concat
 local tonumber = tonumber
 local tostring = tostring
 local ipairs = ipairs
 local ceil = math.ceil
-local fmod = math.fmod
 local spawn = ngx.thread.spawn
 local wait = ngx.thread.wait
 local pcall = pcall
@@ -202,7 +200,6 @@ local function peer_ok(ctx, is_backup, id, peer)
 end
 
 local function check_peer(ctx, id, peer, is_backup)
-    local u = ctx.upstream
     local ok, err
     local name = peer.name
     local statuses = ctx.statuses
@@ -214,64 +211,53 @@ local function check_peer(ctx, id, peer, is_backup)
         return
     end
 
+    -- define shortcut error function
+    local report_error = function(...) 
+      if not peer.down then errlog(...) end
+      sock:close()
+      peer_fail(ctx, is_backup, id, peer) 
+    end
+    
     sock:settimeout(ctx.timeout)
 
     if peer.host then
-        -- print("peer port: ", peer.port)
         ok, err = sock:connect(peer.host, peer.port)
     else
         ok, err = sock:connect(name)
     end
     if not ok then
-        if not peer.down then
-            errlog("failed to connect to ", name, ": ", err)
+        return report_error("failed to connect to ", name, ": ", err)
+    end
+    
+    local bytes, err = sock:send(req)
+    if not bytes then
+        return report_error("failed to send request to ", name, ": ", err)
+    end
+    
+    local status_line, err = sock:receive()
+    if not status_line then
+        return report_error("failed to receive status line from ", name,
+                            ": ", err)
+    end
+    
+    if statuses then
+        local from, to, err = re_find(status_line,
+                                      [[^HTTP/\d+\.\d+\s+(\d+)]],
+                                      "joi", nil, 1)
+        if not from then
+            return report_error("bad status line from ", name, ": ",
+                                status_line)
         end
-        peer_fail(ctx, is_backup, id, peer)
-    else
-        local bytes, err = sock:send(req)
-        if not bytes then
-            if not peer.down then
-                errlog("failed to send request to ", name, ": ", err)
-            end
-            peer_fail(ctx, is_backup, id, peer)
-        else
-            local status_line, err = sock:receive()
-            if not status_line then
-                if not peer.down then
-                    errlog("failed to receive status line from ", name,
-                           ": ", err)
-                end
-                peer_fail(ctx, is_backup, id, peer)
-            else
-                if statuses then
-                    local from, to, err = re_find(status_line,
-                                                  [[^HTTP/\d+\.\d+\s+(\d+)]],
-                                                  "joi", nil, 1)
-                    if not from then
-                        if not peer.down then
-                            errlog("bad status line from ", name, ": ",
-                                   status_line)
-                        end
-                        peer_fail(ctx, is_backup, id, peer)
-                    else
-                        local status = tonumber(sub(status_line, from, to))
-                        if not statuses[status] then
-                            if not peer.down then
-                                errlog("bad status code from ",
-                                       name, ": ", status)
-                            end
-                            peer_fail(ctx, is_backup, id, peer)
-                        else
-                            peer_ok(ctx, is_backup, id, peer)
-                        end
-                    end
-                else
-                    peer_ok(ctx, is_backup, id, peer)
-                end
-            end
-            sock:close()
+        
+        local status = tonumber(sub(status_line, from, to))
+        if not statuses[status] then
+            return report_error("bad status code from ",
+                                 name, ": ", status)
         end
     end
+            
+    peer_ok(ctx, is_backup, id, peer)
+    sock:close()
 end
 
 local function check_peer_range(ctx, from, to, peers, is_backup)
@@ -281,9 +267,6 @@ local function check_peer_range(ctx, from, to, peers, is_backup)
 end
 
 local function check_peers(ctx, peers, is_backup)
-    local statuses = ctx.statuses
-    local req = ctx.http_req
-
     local n = #peers
     if n == 0 then
         return
