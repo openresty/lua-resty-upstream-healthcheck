@@ -199,6 +199,13 @@ local function peer_ok(ctx, is_backup, id, peer)
     end
 end
 
+-- shortcut error function for check_peer()
+local report_error = function(sock, ctx, is_backup, id, peer, ...) 
+  if not peer.down then errlog(...) end
+  sock:close()
+  peer_fail(ctx, is_backup, id, peer) 
+end
+
 local function check_peer(ctx, id, peer, is_backup)
     local ok, err
     local name = peer.name
@@ -210,13 +217,6 @@ local function check_peer(ctx, id, peer, is_backup)
         errlog("failed to create stream socket: ", err)
         return
     end
-
-    -- define shortcut error function
-    local report_error = function(...) 
-      if not peer.down then errlog(...) end
-      sock:close()
-      peer_fail(ctx, is_backup, id, peer) 
-    end
     
     sock:settimeout(ctx.timeout)
 
@@ -226,17 +226,20 @@ local function check_peer(ctx, id, peer, is_backup)
         ok, err = sock:connect(name)
     end
     if not ok then
-        return report_error("failed to connect to ", name, ": ", err)
+        return report_error(sock, ctx, is_backup, id, peer, 
+                            "failed to connect to ", name, ": ", err)
     end
     
     local bytes, err = sock:send(req)
     if not bytes then
-        return report_error("failed to send request to ", name, ": ", err)
+        return report_error(sock, ctx, is_backup, id, peer, 
+                            "failed to send request to ", name, ": ", err)
     end
     
     local status_line, err = sock:receive()
     if not status_line then
-        return report_error("failed to receive status line from ", name,
+        return report_error(sock, ctx, is_backup, id, peer, 
+                            "failed to receive status line from ", name,
                             ": ", err)
     end
     
@@ -245,14 +248,16 @@ local function check_peer(ctx, id, peer, is_backup)
                                       [[^HTTP/\d+\.\d+\s+(\d+)]],
                                       "joi", nil, 1)
         if not from then
-            return report_error("bad status line from ", name, ": ",
+            return report_error(sock, ctx, is_backup, id, peer, 
+                                "bad status line from ", name, ": ",
                                 status_line)
         end
         
         local status = tonumber(sub(status_line, from, to))
         if not statuses[status] then
-            return report_error("bad status code from ",
-                                 name, ": ", status)
+            return report_error(sock, ctx, is_backup, id, peer, 
+                                "bad status code from ",
+                                name, ": ", status)
         end
     end
             
