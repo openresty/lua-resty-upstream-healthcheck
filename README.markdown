@@ -11,6 +11,8 @@ Table of Contents
 * [Synopsis](#synopsis)
 * [Description](#description)
 * [Methods](#methods)
+    * [spawn_checker](#spawn_checker)
+* [Multiple Upstreams](#multiple-upstreams)
 * [Installation](#installation)
 * [TODO](#todo)
 * [Community](#community)
@@ -97,10 +99,67 @@ http {
 Description
 ===========
 
+This library performs healthcheck for server peers defined in NGINX `upstream` groups specified by names.
+
 [Back to TOC](#table-of-contents)
 
 Methods
 =======
+
+spawn_checker
+-------------
+**syntax:** `ok, err = healthcheck.spawn_checker(options)`
+
+**context:** *init_worker_by_lua&#42;*
+
+Spawns background timer-based "light threads" to perform periodic healthchecks on
+the specified NGINX upstream group with the specified shm storage.
+
+This method call is asynchronous and returns immediately.
+
+Returns true on success, or `nil` and a string describing an error otherwise.
+
+[Back to TOC](#table-of-contents)
+
+Multiple Upstreams
+==================
+
+One can perform healchchecks on multiple `upstream` groups by calling the [spawn_checker](#spawn_checker) method
+multiple times in the `init_worker_by_lua*` handler. For example,
+
+```nginx
+upstream foo {
+    ...
+}
+
+upstream bar {
+    ...
+}
+
+lua_shared_dict healthcheck 1m;
+
+lua_socket_log_errors off;
+
+init_worker_by_lua_block {
+    init_worker_by_lua_block {
+        local hc = require "resty.upstream.healthcheck"
+
+        local ok, err = hc.spawn_checker{
+            shm = "healthcheck",
+            upstream = "foo",
+            ...
+        }
+
+        ...
+
+        ok, err = hc.spawn_checker{
+            shm = "healthcheck",
+            upstream = "bar",
+            ...
+        }
+    }
+}
+```
 
 [Back to TOC](#table-of-contents)
 
@@ -109,13 +168,13 @@ Installation
 
 If you are using [OpenResty](http://openresty.org) 1.9.3.2 or later, then you should already have this library (and all of its dependencies) installed by default (and this is also the recommended way of using this library). Otherwise continue reading:
 
-You need to compile both the [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) and [ngx_lua_upstream](https://github.com/agentzh/lua-upstream-nginx-module) modules into your Nginx.
+You need to compile both the [ngx_lua](https://github.com/openresty/lua-nginx-module) and [ngx_lua_upstream](https://github.com/openresty/lua-upstream-nginx-module) modules into your Nginx.
 
-The latest git master branch of [ngx_lua](https://github.com/chaoslawful/lua-nginx-module) is required.
+The latest git master branch of [ngx_lua](https://github.com/openresty/lua-nginx-module) is required.
 
 You need to configure
-the [lua_package_path](https://github.com/chaoslawful/lua-nginx-module#lua_package_path) directive to
-add the path of your `lua-resty-upstream-healthcheck` source tree to [ngx_lua](https://github.com/chaoslawful/lua-nginx-module)'s Lua module search path, as in
+the [lua_package_path](https://github.com/openresty/lua-nginx-module#lua_package_path) directive to
+add the path of your `lua-resty-upstream-healthcheck` source tree to [ngx_lua](https://github.com/openresty/lua-nginx-module)'s Lua module search path, as in
 
 ```nginx
 # nginx.conf
@@ -156,7 +215,7 @@ Bugs and Patches
 
 Please report bugs or submit patches by
 
-1. creating a ticket on the [GitHub Issue Tracker](http://github.com/agentzh/lua-resty-lock/issues),
+1. creating a ticket on the [GitHub Issue Tracker](http://github.com/openresty/lua-resty-lock/issues),
 1. or posting to the [OpenResty community](#community).
 
 [Back to TOC](#table-of-contents)
@@ -173,7 +232,7 @@ Copyright and License
 
 This module is licensed under the BSD license.
 
-Copyright (C) 2014, by Yichun "agentzh" Zhang, CloudFlare Inc.
+Copyright (C) 2014-2016, by Yichun "agentzh" Zhang, CloudFlare Inc.
 
 All rights reserved.
 
@@ -189,8 +248,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 See Also
 ========
-* the ngx_lua module: https://github.com/chaoslawful/lua-nginx-module
-* the ngx_lua_upstream module: https://github.com/agentzh/lua-upstream-nginx-module
+* the ngx_lua module: https://github.com/openresty/lua-nginx-module
+* the ngx_lua_upstream module: https://github.com/openresty/lua-upstream-nginx-module
 * OpenResty: http://openresty.org
 
 [Back to TOC](#table-of-contents)
