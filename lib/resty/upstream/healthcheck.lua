@@ -227,8 +227,10 @@ local function check_peer(ctx, id, peer, is_backup)
         ok, err = sock:connect(name)
     end
     if not ok then
-        return report_error(sock, ctx, is_backup, id, peer,
-                            "failed to connect to ", name, ": ", err)
+        if not peer.down then 
+            errlog("failed to connect to ", name, ": ", err) 
+        end
+        return peer_fail(ctx, is_backup, id, peer)
     end
 
     local bytes, err = sock:send(req)
