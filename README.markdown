@@ -64,6 +64,8 @@ http {
             rise = 2,  -- # of successive successes before turning a peer up
             valid_statuses = {200, 302},  -- a list valid HTTP status code
             concurrency = 10,  -- concurrency level for test requests
+            http_version = "1.1", -- the http protocol version used for request format. Only 1.0 or 1.1 are supported values. By default 1.1 is used.
+            expected_body = "Server_Ok", -- the body we expect to receive. If you want contains instead of exact matching use % (e.g %Server_Ok%)
         }
         if not ok then
             ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
