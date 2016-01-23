@@ -128,6 +128,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 
 
 === TEST 2: health check (bad case), no listening port in the backup peer
+--- ONLY
 --- http_config eval
 "$::HttpConfig"
 . q{

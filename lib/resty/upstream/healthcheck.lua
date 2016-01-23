@@ -1,3 +1,24 @@
+--[[== START ============= temporary debug code ============================]]--
+-- with Lua 5.1 patch global xpcall to take function args (standard in 5.2+)
+if _VERSION=="Lua 5.1" then
+  local xp = xpcall
+  xpcall = function(f, err, ...)
+    local a = { n = select("#", ...), ...}
+    return xp(function(...) return f(unpack(a,1,a.n)) end, err)
+  end
+end
+
+-- error handler to attach stacktrack to error message
+local ehandler = function(err)
+  return debug.traceback(tostring(err))
+end
+
+-- patch global pcall to attach stacktrace to the error. 
+pcall = function(fn, ...)
+  return xpcall(fn, ehandler, ...)
+end
+--[[== END =============== temporary debug code ============================]]--
+
 local stream_sock = ngx.socket.tcp
 local log = ngx.log
 local ERR = ngx.ERR
@@ -9,7 +30,7 @@ local sub = string.sub
 local re_find = ngx.re.find
 local new_timer = ngx.timer.at
 local shared = ngx.shared
-local debug_mode = ngx.config.debug
+local debug_mode = true --ngx.config.debug
 local concat = table.concat
 local tonumber = tonumber
 local tostring = tostring
@@ -288,10 +309,18 @@ end
 -- @return table with 3 keys;primary_peers, backup_peers, both lists with peers,
 -- and a version number
 local function read_peer_data(ctx)
-    local data, err = ctx.dict:get(gen_upstream_key(KEY_DATA, ctx.u))
+    local data, err = ctx.dict:get(gen_upstream_key(KEY_DATA, ctx.upstream))
 
     if not data then
-        return nil, "failed fetching data from shm; " .. tostring(err)
+        if err then
+            return nil, "failed fetching data from shm; " .. tostring(err)
+        end
+        -- no error, so there was nothing in the shm
+        return { 
+            primary_peers = {},
+            backup_peers = {},
+            version = "uninitialized",
+        }
     end
 
     return cjson.decode(data)
@@ -299,18 +328,20 @@ end
 
 -- Writes the list of peers and its data to the shm.
 -- @param upstream Name of the upstream whose data to fetch
--- @param peers table with 3 keys;primary_peers, backup_peers, both lists with
--- peers, and a version number
+-- @param peers table with 3 keys;primary_peers, backup_peers, and a version
 -- @return true on success, nil+error on failure
 local function write_peer_data(ctx, peers)
     local data, err, success
+    local dict = ctx.dict
+    local u = ctx.upstream
+    
     data, err = cjson.encode(peers)
 
     if not data then
         return nil, "failed encoding data; " .. tostring(err)
     end
 
-    success, err = ctx.dict:set(gen_upstream_key(KEY_DATA, ctx.u), data)
+    success, err = dict:set(gen_upstream_key(KEY_DATA, u), data)
 
     if not success then
         return nil, "failed writing data to shm; " .. tostring(err)
@@ -337,14 +368,15 @@ end
 
 -- Will fetch the updated peer list, and update our local lists (in place)
 -- @return peers table on success, nil+error otherwise
-local function update_peers_version(ctx, peers)
+local function update_peers_version(ctx, peers, version)
     local ppeers, bpeers, err
-    ppeers, err = ctx.get_primary_peers(ctx.u)
+    
+    ppeers, err = ctx.get_primary_peers(ctx.upstream)
     if not ppeers then
         return nil, "failed to get primary peers: " .. err
     end
 
-    bpeers, err = ctx.get_backup_peers(ctx.u)
+    bpeers, err = ctx.get_backup_peers(ctx.upstream)
     if not bpeers then
         return nil, "failed to get backup peers: " .. err
     end
@@ -377,6 +409,9 @@ local function update_peers_version(ctx, peers)
 
     peers.primary_peers = ppeers
     peers.backup_peers = bpeers
+    -- we reuse version fetched earlier. Worst case someone else updates in
+    -- between, and we update twice. No racing here.
+    peers.version = version
     return peers
 end
 
@@ -398,10 +433,12 @@ local function do_check(ctx)
         if peers_version ~= peers.version then
             if debug_mode then
                 debug("New peer list was flagged, updating to version ",
-                      peers_version)
+                      (peers_version and (tostring(peers_version) .. 
+                      " (versus ours; "..tostring(peers.version)..")")) or 
+                      "(no version found in shm, initializing)")
             end
 
-            success, err = update_peers_version(ctx, peers)
+            success, err = update_peers_version(ctx, peers, peers_version)
             if not success then
                 return errlog("error updating peers list; " .. tostring(err))
             end
@@ -433,6 +470,8 @@ local function do_check(ctx)
             if debug_mode then
                 debug("published available peers version ", success)
             end
+            
+            ctx.new_version = nil
         end
     end
 
@@ -440,41 +479,46 @@ end
 
 local check
 check = function (premature, ctx)
-    local ok, err
+    local ok, err, version, key
     if premature then
         return
     end
 
+    key = gen_upstream_key(KEY_PEER_VERSION, ctx.upstream)
+    version, err = ctx.dict:add(key, 0) 
+    if err and err ~= "exists" then
+        return errlog("failed to initialize peer version; "..tostring(err))
+    end
+
     ok, err = pcall(do_check, ctx)
     if not ok then
-        errlog("failed to run healthcheck cycle: ", err)
+        return errlog("failed to run healthcheck cycle: ", err)
     end
 
     ok, err = new_timer(ctx.interval, check, ctx)
     if not ok then
         if err ~= "process exiting" then
-            errlog("failed to create timer: ", err)
+            return errlog("failed to create timer: ", err)
         end
         return
     end
 end
 
 local function load_upstream_manager(upstream_manager)
-    upstream_manager = upstream_manager or "ngx.upstreams"
+    upstream_manager = upstream_manager or "ngx.upstream"
 
     assert(type(upstream_manager) == "string" or
            type(upstream_manager == "table"),
            "the upstream_manager option must be a string (module name) or " ..
            "table (actual module)")
 
-    if type(upstream_manager) == string then
+    if type(upstream_manager) == "string" then
         local ok, upstream = pcall(require, upstream_manager)
         if not ok then
             error('Could not load the required "'..upstream_manager..'" module')
         end
         upstream_manager = upstream
     end
-
     for _,fname in ipairs({"set_peer_down", "get_primary_peers",
                           "get_backup_peers", "get_upstreams"}) do
         assert(type(upstream_manager[fname]) == "function",
@@ -573,16 +617,18 @@ function _M.spawn_checker(opts)
 
     local ctx = {
         upstream = u,
-        primary_peers = preprocess_peers(ppeers),
-        backup_peers = preprocess_peers(bpeers),
-        http_req = http_req,
+--[[        peers = {
+          primary_peers = preprocess_peers(ppeers),
+          backup_peers = preprocess_peers(bpeers),
+          version = 0,
+        },
+]]        http_req = http_req,
         timeout = timeout,
         interval = interval,
         dict = dict,
         fall = fall,
         rise = rise,
         statuses = statuses,
-        version = 0,
         concurrency = concur,
         set_peer_down = upstream_manager.set_peer_down,
         get_primary_peers = upstream_manager.get_primary_peers,
@@ -644,6 +690,7 @@ end
 
 function _M.status_page(opts)
     -- generate an HTML page
+    opts = opts or {}
     local upstream_manager = load_upstream_manager(opts.upstream_manager)
     local us, err = upstream_manager.get_upstreams()
     if not us then
