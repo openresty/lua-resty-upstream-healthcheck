@@ -119,6 +119,7 @@ failed to run healthcheck cycle
 qr/^healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
+publishing peers version 1
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
@@ -128,7 +129,6 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 
 
 === TEST 2: health check (bad case), no listening port in the backup peer
---- ONLY
 --- http_config eval
 "$::HttpConfig"
 . q{
@@ -215,11 +215,12 @@ healthcheck: failed to connect to 127.0.0.1:12356: connection refused
 qr/^healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
+publishing peers version 1
 healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
 warn\(\): healthcheck: peer 127\.0\.0\.1:12356 is turned down after 2 failure\(s\)
-publishing peers version 1
+publishing peers version 2
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
@@ -669,6 +670,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 
 
 === TEST 7: peers version upgrade (make up peers down)
+--- ONLY
 --- http_config eval
 "$::HttpConfig"
 . q{
