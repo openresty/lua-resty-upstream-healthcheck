@@ -200,9 +200,10 @@ local function peer_ok(ctx, is_backup, id, peer)
 end
 
 -- shortcut error function for check_peer()
-local function report_error(sock, ctx, is_backup, id, peer, ...)
-  if not peer.down then errlog(...) end
-  sock:close()
+local function peer_error(ctx, is_backup, id, peer, ...)
+  if not peer.down then
+      errlog(...)
+  end
   peer_fail(ctx, is_backup, id, peer)
 end
 
@@ -235,15 +236,18 @@ local function check_peer(ctx, id, peer, is_backup)
 
     local bytes, err = sock:send(req)
     if not bytes then
-        return report_error(sock, ctx, is_backup, id, peer,
-                            "failed to send request to ", name, ": ", err)
+        return peer_error(ctx, is_backup, id, peer,
+                          "failed to send request to ", name, ": ", err)
     end
 
     local status_line, err = sock:receive()
     if not status_line then
-        return report_error(sock, ctx, is_backup, id, peer,
-                            "failed to receive status line from ", name,
-                            ": ", err)
+        peer_error(ctx, is_backup, id, peer,
+                   "failed to receive status line from ", name, ": ", err)
+        if err == "timeout" then
+            sock:close()  -- timeout errors do not close the socket.
+        end
+        return
     end
 
     if statuses then
@@ -251,16 +255,19 @@ local function check_peer(ctx, id, peer, is_backup)
                                       [[^HTTP/\d+\.\d+\s+(\d+)]],
                                       "joi", nil, 1)
         if not from then
-            return report_error(sock, ctx, is_backup, id, peer,
-                                "bad status line from ", name, ": ",
-                                status_line)
+            peer_error(ctx, is_backup, id, peer,
+                       "bad status line from ", name, ": ",
+                       status_line)
+            sock:close()
+            return
         end
 
         local status = tonumber(sub(status_line, from, to))
         if not statuses[status] then
-            return report_error(sock, ctx, is_backup, id, peer,
-                                "bad status code from ",
-                                name, ": ", status)
+            peer_error(ctx, is_backup, id, peer, "bad status code from ",
+                       name, ": ", status)
+            sock:close()
+            return
         end
     end
 
