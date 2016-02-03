@@ -4,7 +4,6 @@ local ERR = ngx.ERR
 local INFO = ngx.INFO
 local WARN = ngx.WARN
 local DEBUG = ngx.DEBUG
-local str_find = string.find
 local sub = string.sub
 local re_find = ngx.re.find
 local new_timer = ngx.timer.at
@@ -513,10 +512,8 @@ local function preprocess_peers(peers)
         local p = peers[i]
         local name = p.name
         if name then
-            local idx = str_find(name, ":", 1, true)
-            if idx then
-                p.host = sub(name, 1, idx - 1)
-                p.port = tonumber(sub(name, idx + 1))
+            if name:sub(-1, -1)~=']' then
+                p.host, p.port = name:match'(.*):(.*)'
             end
         end
     end
