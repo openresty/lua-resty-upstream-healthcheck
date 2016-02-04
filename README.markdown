@@ -116,6 +116,9 @@ spawn_checker
 Spawns background timer-based "light threads" to perform periodic healthchecks on
 the specified NGINX upstream group with the specified shm storage.
 
+The healthchecker does not need any client traffic to function. The checks are performed actively
+and periodically.
+
 This method call is asynchronous and returns immediately.
 
 Returns true on success, or `nil` and a string describing an error otherwise.
