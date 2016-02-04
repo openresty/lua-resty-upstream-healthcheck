@@ -12,6 +12,7 @@ Table of Contents
 * [Description](#description)
 * [Methods](#methods)
     * [spawn_checker](#spawn_checker)
+    * [status_page](#status_page)
 * [Multiple Upstreams](#multiple-upstreams)
 * [Installation](#installation)
 * [TODO](#todo)
@@ -115,9 +116,55 @@ spawn_checker
 Spawns background timer-based "light threads" to perform periodic healthchecks on
 the specified NGINX upstream group with the specified shm storage.
 
+The healthchecker does not need any client traffic to function. The checks are performed actively
+and periodically.
+
 This method call is asynchronous and returns immediately.
 
 Returns true on success, or `nil` and a string describing an error otherwise.
+
+[Back to TOC](#table-of-contents)
+
+status_page
+-----------
+**syntax:** `str, err = healthcheck.status_page()`
+
+**context:** *any*
+
+Generates a detailed status report for all the upstreams defined in the current NGINX server.
+
+One typical output is
+
+```
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 DOWN
+    Backup Peers
+        127.0.0.1:12356 up
+
+Upstream bar.com
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 DOWN
+        127.0.0.1:12357 DOWN
+    Backup Peers
+        127.0.0.1:12356 up
+```
+
+If an upstream has no health checkers, then it will be marked by `(NO checkers)`, as in
+
+```
+Upstream foo.com (NO checkers)
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 up
+    Backup Peers
+        127.0.0.1:12356 up
+```
+
+If you indeed have spawned a healthchecker in `init_worker_by_lua*`, then you should really
+check out the NGINX error log file to see if there is any fatal errors aborting the healthchecker threads.
 
 [Back to TOC](#table-of-contents)
 
@@ -160,6 +207,12 @@ init_worker_by_lua_block {
     }
 }
 ```
+
+Different upstreams' healthcheckers use different keys (by always prefixing the keys with the
+upstream name), so sharing a single `lua_shared_dict` among multiple checkers should not have
+any issues at all. But you need to compensate the size of the shared dict for multiple users (i.e., multiple checkers).
+If you have many upstreams (thousands or even more), then it is more optimal to use separate shm zones
+for each (group) of the upstreams.
 
 [Back to TOC](#table-of-contents)
 

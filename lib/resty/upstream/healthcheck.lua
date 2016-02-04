@@ -44,6 +44,8 @@ local get_primary_peers = upstream.get_primary_peers
 local get_backup_peers = upstream.get_backup_peers
 local get_upstreams = upstream.get_upstreams
 
+local upstream_checker_statuses = {}
+
 local function info(...)
     log(INFO, "healthcheck: ", ...)
 end
@@ -467,6 +469,21 @@ local function do_check(ctx)
     end
 end
 
+local function update_upstream_checker_status(upstream, success)
+    local cnt = upstream_checker_statuses[upstream]
+    if not cnt then
+        cnt = 0
+    end
+
+    if success then
+        cnt = cnt + 1
+    else
+        cnt = cnt - 1
+    end
+
+    upstream_checker_statuses[upstream] = cnt
+end
+
 local check
 check = function (premature, ctx)
     if premature then
@@ -483,6 +500,8 @@ check = function (premature, ctx)
         if err ~= "process exiting" then
             errlog("failed to create timer: ", err)
         end
+
+        update_upstream_checker_status(ctx.upstream, false)
         return
     end
 end
@@ -604,6 +623,8 @@ function _M.spawn_checker(opts)
         return nil, "failed to create timer: " .. err
     end
 
+    update_upstream_checker_status(u, true)
+
     return true
 end
 
@@ -640,10 +661,19 @@ function _M.status_page()
         end
 
         local u = us[i]
+
         bits[idx] = "Upstream "
         bits[idx + 1] = u
-        bits[idx + 2] = "\n    Primary Peers\n"
-        idx = idx + 3
+        idx = idx + 2
+
+        local ncheckers = upstream_checker_statuses[u]
+        if not ncheckers or ncheckers == 0 then
+            bits[idx] = " (NO checkers)"
+            idx = idx + 1
+        end
+
+        bits[idx] = "\n    Primary Peers\n"
+        idx = idx + 1
 
         local peers, err = get_primary_peers(u)
         if not peers then
