@@ -122,7 +122,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
-){3,7}$/
+){3,5}$/
 --- timeout: 6
 
 
@@ -222,7 +222,7 @@ publishing peers version 1
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
-){2,6}$/
+){2,4}$/
 --- timeout: 6
 
 
@@ -321,7 +321,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
-){2,6}$/
+){2,4}$/
 --- timeout: 6
 
 
@@ -427,7 +427,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
-){1,6}$/
+){1,4}$/
 --- timeout: 6
 
 
@@ -662,7 +662,7 @@ publishing peers version 2
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
-){1,4}$/
+){1,3}$/
 --- timeout: 6
 
 
@@ -775,7 +775,7 @@ publishing peers version 2
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
-){2,6}$/
+){2,4}$/
 
 
 
@@ -879,7 +879,7 @@ publishing peers version 2
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
-){3,6}$/
+){3,5}$/
 --- timeout: 6
 
 
@@ -944,7 +944,7 @@ healthcheck: peer 127.0.0.1:12359 is turned down after 2 failure(s)
 qr/^(?:spawn a thread checking primary peers 0 to 2
 check primary peers 3 to 4
 check backup peer 0
-){4,8}$/
+){4,6}$/
 
 
 
@@ -1005,7 +1005,7 @@ qr/^(?:spawn a thread checking primary peer 0
 spawn a thread checking primary peer 1
 check primary peer 2
 check backup peer 0
-){4,8}$/
+){4,6}$/
 
 
 
