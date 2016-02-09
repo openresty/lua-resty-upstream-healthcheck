@@ -1303,7 +1303,7 @@ server {
 }
 
 lua_shared_dict healthcheck 1m;
-init_worker_by_lua '
+init_worker_by_lua_block {
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -1318,12 +1318,12 @@ init_worker_by_lua '
         ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
         return
     end
-';
+}
 }
 --- config
     location = /t {
         access_log off;
-        content_by_lua '
+        content_by_lua_block {
             ngx.sleep(0.52)
 
             local hc = require "resty.upstream.healthcheck"
@@ -1333,14 +1333,14 @@ init_worker_by_lua '
                 local res = ngx.location.capture("/proxy")
                 ngx.say("upstream addr: ", res.header["X-Foo"])
             end
-        ';
+        }
     }
 
     location = /proxy {
         proxy_pass http://foo.com/;
-        header_filter_by_lua '
+        header_filter_by_lua_block {
             ngx.header["X-Foo"] = ngx.var.upstream_addr;
-        ';
+        }
     }
 --- request
 GET /t
