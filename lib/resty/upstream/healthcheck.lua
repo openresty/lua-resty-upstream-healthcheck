@@ -512,11 +512,12 @@ local function preprocess_peers(peers)
     for i = 1, n do
         local p = peers[i]
         local name = p.name
+
         if name then
-            local idx = str_find(name, ":", 1, true)
-            if idx then
-                p.host = sub(name, 1, idx - 1)
-                p.port = tonumber(sub(name, idx + 1))
+            local from, to, err = re_find(name, [[^(.*):\d+$]], "jo", nil, 1)
+            if from then
+                p.host = sub(name, 1, to)
+                p.port = tonumber(sub(name, to + 2))
             end
         end
     end
