@@ -1310,7 +1310,7 @@ init_worker_by_lua_block {
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        http_req = "GET /status HTTP/1.0\r\nHost: localhost\r\n\r\n",
         interval = 100,  -- 100ms
         fall = 2,
     }
