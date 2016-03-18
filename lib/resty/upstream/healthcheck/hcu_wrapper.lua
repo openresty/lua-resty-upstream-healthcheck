@@ -6,6 +6,7 @@ local ev = require "resty.worker.events"
 
 local upstream = require "ngx.upstream"
 local spd = upstream.set_peer_down
+local re_find = ngx.re.find
 
 local debug_mode = true --ngx.config.debug
 local log = ngx.log
@@ -16,8 +17,6 @@ local DEBUG = ngx.DEBUG
 
 local PRIMARY = "P:"
 local BACKUP = "B:"
-local peer_source = hc.events._source
-local peer_status = hc.events.peer_status
 
 local function debug(...)
     -- print("debug mode: ", debug_mode)
@@ -26,17 +25,16 @@ local function debug(...)
     end
 end
 
-ev.register(function(source, event, peer, pid)
-    if event == peer_status and source == peer_source then
-        -- status update event
-        local peer_id = peer.id
-        local is_backup = (peer_id:sub(1,2) == BACKUP)
-        peer_id = peer_id:sub(3,-1)
-        debug("setting ", is_backup and "backup" or "primary", " peer ",
-              peer.name," ", peer.down and "down" or "up")
-        return spd(peer.upstream, is_backup, peer_id, peer.down)
-    end
-end)
+local status_handler = function(peer)
+    local peer_id = peer.id
+    local is_backup = (peer_id:sub(1,2) == BACKUP)
+    peer_id = peer_id:sub(3,-1)
+    debug("setting ", is_backup and "backup" or "primary", " peer ",
+          peer.name," ", peer.down and "down" or "up")
+    spd(peer.upstream, is_backup, peer_id, peer.down)
+end
+
+ev.register(status_handler, hc.events._source, hc.events.peer_status)
 
 local _M = {
 
@@ -63,10 +61,10 @@ local _M = {
                     port = data.port,
                     upstream = upstream_name,
                 }
-                local idx = peer.name:find(":", 1, true)
-                if idx then
-                    peer.host = peer.name:sub(1, idx - 1)
-                    peer.port = tonumber(peer.name:sub(idx + 1, -1))
+                local from, to = re_find(peer.name, [[^(.*):\d+$]], "jo", nil, 1)
+                if from then
+                    peer.host = peer.name:sub(1, to)
+                    peer.port = tonumber(peer.name:sub(to + 2))
                 end
                 peers[peer.id] = peer
             end

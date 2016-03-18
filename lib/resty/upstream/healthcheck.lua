@@ -29,7 +29,7 @@ local sub = string.sub
 local re_find = ngx.re.find
 local new_timer = ngx.timer.at
 local shared = ngx.shared
-local debug_mode = true --ngx.config.debug
+local debug_mode = ngx.config.debug
 local concat = table.concat
 local insert = table.insert
 local tonumber = tonumber
@@ -45,7 +45,11 @@ local cjson = require("cjson.safe").new()
 local KEY_LOCK = "resty-healthcheck:l:" -- lock
 local KEY_DATA = "resty-healthcheck:d:" -- serialized healthcheck json data
 
+-- will contain all generated checkers by upstream name
+local checkers = {}
+
 local events = require("resty.worker.events")
+
 
 local _M = {
     _VERSION = '0.03',  --TODO: what version is minimum required?
@@ -55,10 +59,7 @@ local _M = {
         "peer_status",                -- event for a changed peer down-status
         "peer_added",                 -- event for an added upstream peer
         "peer_removed"                -- event for a removed upstream peer
-    ),
-
-    -- will contain all generated checkers by upstream name
-    checkers = {},
+    )
 }
 
 if not ngx.config
@@ -152,8 +153,6 @@ local function peer_fail(checker, peer)
                 " failure(s)")
         peer.down = true
 
---        checker.availability_update = true
-        
         raise_event(_M.events.peer_status, peer)
     end
 end
@@ -170,7 +169,6 @@ local function peer_ok(checker, peer)
         warn("peer ", peer.name, " is turned up after ", peer.successes,
                 " success(es)")
         peer.down = nil
---        checker.availability_update = true
 
         raise_event(_M.events.peer_status, peer)
     end
@@ -441,7 +439,6 @@ local function new_checker(checker)
                     raise_event(_M.events.peer_removed, peer)
                 end
             end
---            self.availability_update = true
         end
 
         -- step 2; execute the healthchecks
@@ -499,12 +496,12 @@ local function new_checker(checker)
     function checker:start()
         local ok, err
         
-        if _M.checkers[self.upstream] then
+        if checkers[self.upstream] then
             return nil, "Checker for upstream "..tostring(self.upstream)..
                    " already exists"
         end
         
-        _M.checkers[self.upstream] = self
+        checkers[self.upstream] = self
         
         ok, err = new_timer(0, self.check, self)
         if not ok then
@@ -517,7 +514,11 @@ local function new_checker(checker)
     return checker
 end
 
+
 function _M.spawn_checker(opts)
+    assert(events.configured(), "Please configure the 'lua-resty-worker-events' "..
+          "module before using the healthchecker")
+
     local typ = opts.type
     if not typ then
         return nil, "\"type\" option required"
@@ -604,7 +605,6 @@ function _M.spawn_checker(opts)
         rise = rise,
         statuses = statuses,
         concurrency = concurrency,
---        version = 0,
 
         -- create upstream manager wrappers
         set_peer_down = function(self, ...)
@@ -669,8 +669,9 @@ function _M.status_page(opts)
         end
 
         local u = us[i]
-        bits[idx] = "Upstream "
-        bits[idx + 1] = u
+
+        bits[idx] = "Upstream " 
+        bits[idx + 1] = u .. ((checkers[u] and "") or " (NO checkers)")
         bits[idx + 2] = "\n"
         idx = idx + 3
 
