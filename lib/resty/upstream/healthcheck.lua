@@ -1,24 +1,3 @@
----[[== START ============= temporary debug code ==============================--
--- with Lua 5.1 patch global xpcall to take function args (standard in 5.2+)
-if _VERSION=="Lua 5.1" then
-  local xp = xpcall
-  xpcall = function(f, err, ...)
-    local a = { n = select("#", ...), ...}
-    return xp(function(...) return f(unpack(a,1,a.n)) end, err)
-  end
-end
-
--- error handler to attach stacktrack to error message
-local ehandler = function(err)
-  return debug.traceback(tostring(err))
-end
-
--- patch global pcall to attach stacktrace to the error. 
-pcall = function(fn, ...)
-  return xpcall(fn, ehandler, ...)
-end
---==== END =============== temporary debug code ============================]]--
-
 local stream_sock = ngx.socket.tcp
 local log = ngx.log
 local ERR = ngx.ERR

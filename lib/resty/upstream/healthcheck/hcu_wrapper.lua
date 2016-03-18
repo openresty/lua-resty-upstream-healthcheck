@@ -8,7 +8,7 @@ local upstream = require "ngx.upstream"
 local spd = upstream.set_peer_down
 local re_find = ngx.re.find
 
-local debug_mode = true --ngx.config.debug
+local debug_mode = ngx.config.debug
 local log = ngx.log
 --local ERR = ngx.ERR
 --local INFO = ngx.INFO
