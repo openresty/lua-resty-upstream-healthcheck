@@ -599,6 +599,28 @@ function _M.spawn_checker(opts)
     return new_checker(checker):start()
 end
 
+------------------------------------
+-- Implement the upstream api
+------------------------------------
+function _M.get_upstreams()
+  local upstreams = {}
+  for name, checker in pairs(checkers) do
+    upstreams[#upstreams + 1] = name
+  end
+  return upstreams
+end
+
+function _M.get_peers(upstream)
+  local checker = checkers[upstream]
+  if not checker then 
+    return nil, "No healthchecker for upstream '"..tostring(upstream).."'"
+  end
+  return checker:status()
+end
+
+------------------------------------
+-- Provide status pages
+------------------------------------
 local function gen_peers_status_info(peers, bits, idx)
     local p = {}
     for _, peer in pairs(peers) do insert(p, peer) end
@@ -618,8 +640,6 @@ local function gen_peers_status_info(peers, bits, idx)
     end
     return idx
 end
-
--- TODO: fix and test status page
 
 -- opts supports;
 --  opts.upstream_manager

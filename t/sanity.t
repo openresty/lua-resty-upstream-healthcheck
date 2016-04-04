@@ -9,7 +9,7 @@ use Cwd qw(cwd);
 
 #repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6 + 4);
+plan tests => repeat_each() * (blocks() * 6 + 3);
 
 my $pwd = cwd();
 
@@ -1386,3 +1386,135 @@ healthcheck: peer \[::1\]:12355 was checked to be ok
 healthcheck: peer \[0:0::1\]:12356 was checked to be ok
 ){3,7}$/
 --- timeout: 6
+
+=== TEST 15: healthcheck, test upstream api implementation
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+    server 127.0.0.1:12356 backup;
+    server 127.0.0.1:12357 backup;
+}
+
+upstream bar.com {
+    server 127.0.0.1:12355;
+    server 127.0.0.1:12356 backup;
+}
+
+server {
+    listen 12354;
+    location = /status {
+        return 200;
+    }
+}
+
+server {
+    listen 12355;
+    location = /status {
+        return 200;
+    }
+}
+
+server {
+    listen 12356;
+    location = /status {
+        return 200;
+    }
+}
+
+server {
+    listen 12357;
+    location = /status {
+        return 200;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local ev = require "resty.worker.events"
+    ev.configure{
+        shm = "healthcheck",
+        interval = 0.01,
+    }
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "bar.com",
+        type = "http",
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 2,
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+
+            local hc = require "resty.upstream.healthcheck"
+            for i,name in ipairs(hc.get_upstreams()) do
+              ngx.print(tostring(i).." "..name.."\\n")
+              local peers = hc.get_peers(name)
+              local ppeer = function(peer)
+                if not peer then return end
+                ngx.print("    - "..peer.id.." "..peer.name.."\\n")
+              end
+              ppeer(peers["P:0"])
+              ppeer(peers["B:0"])
+              for id, peer in pairs(peers) do
+                if id ~= "P:0" and id ~= "B:0" then
+                  ppeer(peer)
+                end
+              end
+            end
+            ngx.print(hc.status_page())
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
+        ';
+    }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+1 bar.com
+    - P:0 127.0.0.1:12355
+    - B:0 127.0.0.1:12356
+Upstream foo.com (NO checkers)
+    P:0 127.0.0.1:12354 up
+    B:0 127.0.0.1:12356 up
+    B:1 127.0.0.1:12357 up
+
+Upstream bar.com
+    P:0 127.0.0.1:12355 up
+    B:0 127.0.0.1:12356 up
+upstream addr: 127.0.0.1:12354
+upstream addr: 127.0.0.1:12354
+
+--- no_error_log
+[alert]
+failed to run healthcheck cycle
+--- error_log
+--- grep_error_log eval: qr/healthcheck: .*?:12355 .*|warn\(\): .*(?=,)|healthcheck: peer_.*?:12355/
+--- grep_error_log_out eval
+qr/^healthcheck: peer_added, 127.0.0.1:12355
+(?:healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
+){4,6}$/
+--- timeout: 6
+

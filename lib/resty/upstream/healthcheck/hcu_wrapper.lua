@@ -1,5 +1,14 @@
 -- Provides a wrapper for the lua-upstream-nginx-module
 -- to match the interface for the upstream healthchecker.
+--
+-- Responsibilities;
+--
+-- Implement;
+--  get_upstreams();
+--  get_peers(upstream_name)
+--
+-- On a `peer_status` event from the healthchecker update the node
+-- correspondingly
 
 local hc = require "resty.upstream.healthcheck"
 local ev = require "resty.worker.events"
@@ -53,14 +62,11 @@ local _M = {
             end
             
             for _, data in pairs(get_peers(upstream_name) or {}) do
-                local peer = {
-                    name = data.name,
-                    down = data.down,
-                    id = prefix..data.id,
-                    host = data.host,
-                    port = data.port,
-                    upstream = upstream_name,
-                }
+                local peer = {}
+                for k,v in pairs(data) do peer[k] = v end
+                peer.id = prefix..data.id
+                peer.upstream = upstream_name
+
                 local from, to = re_find(peer.name, [[^(.*):\d+$]], "jo", nil, 1)
                 if from then
                     peer.host = peer.name:sub(1, to)

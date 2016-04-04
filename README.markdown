@@ -171,7 +171,7 @@ check out the NGINX error log file to see if there is any fatal errors aborting 
 Multiple Upstreams
 ==================
 
-One can perform healchchecks on multiple `upstream` groups by calling the [spawn_checker](#spawn_checker) method
+One can perform healthchecks on multiple `upstream` groups by calling the [spawn_checker](#spawn_checker) method
 multiple times in the `init_worker_by_lua*` handler. For example,
 
 ```nginx
