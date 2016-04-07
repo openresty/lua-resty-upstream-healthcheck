@@ -47,18 +47,23 @@ ev.register(status_handler, hc.events._source, hc.events.peer_status)
 
 local _M = {
 
-    -- return a peer table, indexed by id, containing values;
-    --    id, name, host, port (number), down (boolean)
-    -- "name" is being split in host and port
+    -- return a peer table, indexed by id.
+    -- Modifications from upstream;
+    --   - "id" gets a prefix for backup/primary
+    --   - "name" is being split in host and port
+    --   - "backup" is added to flag backup nodes
+    --   - "upstream" is added to indicate the upstream of origin
     get_peers = function(upstream_name)
         local peers = {}
         local get_peers = upstream.get_primary_peers
         local prefix = PRIMARY
+        local backup = nil
         
         for n = 1,2 do
             if n == 2 then 
                 get_peers = upstream.get_backup_peers
                 prefix = BACKUP
+                peer.backup = backup
             end
             
             for _, data in pairs(get_peers(upstream_name) or {}) do
@@ -66,6 +71,7 @@ local _M = {
                 for k,v in pairs(data) do peer[k] = v end
                 peer.id = prefix..data.id
                 peer.upstream = upstream_name
+                peer.backup = backup
 
                 local from, to = re_find(peer.name, [[^(.*):\d+$]], "jo", nil, 1)
                 if from then
