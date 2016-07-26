@@ -1371,3 +1371,4 @@ healthcheck: peer \[::1\]:12355 was checked to be ok
 healthcheck: peer \[0:0::1\]:12356 was checked to be ok
 ){3,7}$/
 --- timeout: 6
+--- skip_eval: 8: system("ping6 -c 1 ::1 >/dev/null 2>&1") ne 0
