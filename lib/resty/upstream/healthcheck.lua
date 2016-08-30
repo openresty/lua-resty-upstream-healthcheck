@@ -702,7 +702,7 @@ function _M.status_page()
 end
 
 function _M.status_page_one()
-    -- generate an HTML page for specify upstream name
+
     local arg = ngx.req.get_uri_args()
     if arg["upstream"] == nil then
         ngx.say("usage:\n URL: http://domain.com/?upstream={upstream name}\n")
@@ -723,6 +723,7 @@ function _M.status_page_one()
     bits[idx + 1] = u
     idx = idx + 2
 
+    local ncheckers = upstream_checker_statuses[u]
     if not ncheckers or ncheckers == 0 then
         bits[idx] = " (NO checkers)"
         idx = idx + 1
