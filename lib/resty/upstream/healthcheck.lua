@@ -702,10 +702,11 @@ function _M.status_page()
 end
 
 function _M.status_page_one()
-
+    -- generate an HTML page for specified upstream
+    
     local arg = ngx.req.get_uri_args()
     if arg["upstream"] == nil then
-        ngx.say("usage:\n URL: http://domain.com/?upstream={upstream name}\n")
+        ngx.say("usage:\n URL: http://domain.com/status_one?upstream={upstream name}\n")
         return
     end
 
