@@ -18,6 +18,7 @@ local ceil = math.ceil
 local spawn = ngx.thread.spawn
 local wait = ngx.thread.wait
 local pcall = pcall
+local var = ngx.var
 
 local _M = {
     _VERSION = '0.03'
@@ -648,9 +649,21 @@ local function gen_peers_status_info(peers, bits, idx)
     return idx
 end
 
+string.split = function(s, p)
+    local rt= {}
+    string.gsub(s, '[^'..p..']+', function(w) table.insert(rt, w) end )
+    return rt
+end
+
 function _M.status_page()
-    -- generate an HTML page
-    local us, err = get_upstreams()
+    -- generate an HTML page,or for specified upstream_name
+    -- for example: http://domain.com/status?upstream_name=test1,test2
+    local upstream_name = var.arg_upstream_name
+    if upstream_name == nil then
+        us, err = get_upstreams()
+    else
+        us, err = string.split(upstream_name, ',')
+    end
     if not us then
         return "failed to get upstream names: " .. err
     end
@@ -698,59 +711,6 @@ function _M.status_page()
 
         idx = gen_peers_status_info(peers, bits, idx)
     end
-    return concat(bits)
-end
-
-function _M.status_page_one()
-    -- generate an HTML page for specified upstream
-    
-    local arg = ngx.req.get_uri_args()
-    if arg["upstream"] == nil then
-        ngx.say("usage:\n URL: http://domain.com/status_one?upstream={upstream name}\n")
-        return
-    end
-
-    local us, err = get_upstreams()
-    if not us then
-        return "failed to get upstream names: " .. err
-    end
-    local n = 1
-    local bits = new_tab(n * 20, 0)
-    local idx = 1
-
-    local u = tostring(arg["upstream"])
-
-    bits[idx] = "Upstream "
-    bits[idx + 1] = u
-    idx = idx + 2
-
-    local ncheckers = upstream_checker_statuses[u]
-    if not ncheckers or ncheckers == 0 then
-        bits[idx] = " (NO checkers)"
-        idx = idx + 1
-    end
-
-    bits[idx] = "\n    Primary Peers\n"
-    idx = idx + 1
-
-    local peers, err = get_primary_peers(u)
-    if not peers then
-        return "failed to get primary peers in upstream " .. u .. ": "
-                .. err
-    end
-
-    idx = gen_peers_status_info(peers, bits, idx)
-
-    bits[idx] = "    Backup Peers\n"
-    idx = idx + 1
-
-    peers, err = get_backup_peers(u)
-    if not peers then
-        return "failed to get backup peers in upstream " .. u .. ": "
-                .. err
-    end
-
-    idx = gen_peers_status_info(peers, bits, idx)
     return concat(bits)
 end
 
