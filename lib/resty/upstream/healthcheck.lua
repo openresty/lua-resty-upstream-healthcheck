@@ -6,6 +6,7 @@ local WARN = ngx.WARN
 local DEBUG = ngx.DEBUG
 local str_find = string.find
 local sub = string.sub
+local re_match = ngx.re.match
 local re_find = ngx.re.find
 local new_timer = ngx.timer.at
 local shared = ngx.shared
@@ -214,6 +215,7 @@ local function check_peer(ctx, id, peer, is_backup)
     local name = peer.name
     local statuses = ctx.statuses
     local req = ctx.http_req
+    local match_string = ctx.match_string
 
     local sock, err = stream_sock()
     if not sock then
@@ -268,6 +270,18 @@ local function check_peer(ctx, id, peer, is_backup)
         if not statuses[status] then
             peer_error(ctx, is_backup, id, peer, "bad status code from ",
                        name, ": ", status)
+            sock:close()
+            return
+        end
+    end
+
+    if match_string then
+        local data, err = sock:receive('*a')
+        local m, err = re_match(data, match_string, "jo")
+        if not m then
+            peer_error(ctx, is_backup, id, peer,
+                       "match_string not found from ", name, ": ",
+                       data)
             sock:close()
             return
         end
@@ -567,6 +581,11 @@ function _M.spawn_checker(opts)
 
     -- debug("interval: ", interval)
 
+    local match_string = opts.match_string
+    if not match_string then
+        match_string = "OKI"
+    end
+
     local concur = opts.concurrency
     if not concur then
         concur = 1
@@ -617,6 +636,7 @@ function _M.spawn_checker(opts)
         dict = dict,
         fall = fall,
         rise = rise,
+        match_string = match_string,
         statuses = statuses,
         version = 0,
         concurrency = concur,

@@ -2,6 +2,7 @@ Name
 ====
 
 lua-resty-upstream-healthcheck - Health-checker for Nginx upstream servers
+Add the possibility to match a specific string in the beginning of the body
 
 Table of Contents
 =================
@@ -64,6 +65,7 @@ http {
             fall = 3,  -- # of successive failures before turning a peer down
             rise = 2,  -- # of successive successes before turning a peer up
             valid_statuses = {200, 302},  -- a list valid HTTP status code
+            match_string = "OkiDoki", -- a string to match in the beginning of the body
             concurrency = 10,  -- concurrency level for test requests
         }
         if not ok then
