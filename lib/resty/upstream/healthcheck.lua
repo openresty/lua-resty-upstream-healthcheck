@@ -583,7 +583,7 @@ function _M.spawn_checker(opts)
 
     local match_string = opts.match_string
     if not match_string then
-        match_string = "OKI"
+        match_string = nil
     end
 
     local concur = opts.concurrency
