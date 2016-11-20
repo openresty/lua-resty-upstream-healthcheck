@@ -276,7 +276,7 @@ local function check_peer(ctx, id, peer, is_backup)
     end
 
     if match_string then
-        local bytes, err, partial = sock:receive(2048) -- read the first 2k of data
+        local bytes, err, partial = sock:receive(1024) -- read the first 1k of data
         local data = partial or bytes
         local m, err = re_match(data, match_string, "jo")
         if not m then
