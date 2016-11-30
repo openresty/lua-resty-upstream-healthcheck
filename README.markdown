@@ -53,13 +53,13 @@ http {
 
         -- this should be defined in a separate module to avoid a global function definition
         func_node_down = function(peer)
-            ngx.log(ngx.WARN, peer.name .. " is marked down")
+            ngx.log(ngx.WARN, peer.name, " is marked down")
 
-            -- do something else fancy with data about the peer, like notify a remote service
+            -- do something else fancy with the peer data, like notify a remote service
         end
 
         func_node_up = function(peer)
-            ngx.log(ngx.WARN, peer.name .. " is marked up")
+            ngx.log(ngx.WARN, peer.name, " is marked up")
         end
 
         local ok, err = hc.spawn_checker{

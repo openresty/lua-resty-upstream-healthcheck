@@ -146,7 +146,7 @@ local function peer_fail(ctx, is_backup, id, peer)
         peer.down = true
         set_peer_down_globally(ctx, is_backup, id, true)
 
-        if (ctx.hook_down) then
+        if ctx.hook_down then
             ctx.hook_down(peer)
         end
     end
@@ -203,7 +203,7 @@ local function peer_ok(ctx, is_backup, id, peer)
         peer.down = nil
         set_peer_down_globally(ctx, is_backup, id, nil)
 
-        if (ctx.hook_up) then
+        if ctx.hook_up then
             ctx.hook_up(peer)
         end
     end
@@ -606,12 +606,12 @@ function _M.spawn_checker(opts)
     end
 
     local hook_down = opts.hook_down
-    if (hook_down and type(hook_down) ~= 'function') then
+    if hook_down and type(hook_down) ~= "function" then
         return nil, 'hook_down must be a function'
     end
 
     local hook_up = opts.hook_up
-    if (hook_up and type(hook_up) ~= 'function') then
+    if hook_up and type(hook_up) ~= "function" then
         return nil, 'hook_up must be a function'
     end
 

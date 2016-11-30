@@ -1375,9 +1375,7 @@ healthcheck: peer \[0:0::1\]:12356 was checked to be ok
 
 
 
-
-
-=== TEST 15: hook_down fires as expected
+=== TEST 15: hook_down fires when peer is marked as down
 --- http_config eval
 "$::HttpConfig"
 . q{
@@ -1409,19 +1407,19 @@ server {
 }
 
 lua_shared_dict healthcheck 1m;
-init_worker_by_lua '
+init_worker_by_lua_block {
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
 
     node_down = function(peer)
-        ngx.log(ngx.WARN, peer.name .. " marked as down")
+        ngx.log(ngx.WARN, peer.name, " marked as down")
     end
 
     local ok, err = hc.spawn_checker{
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        http_req = "GET /status HTTP/1.0\r\nHost: localhost\r\n\r\n",
         interval = 100,  -- 100ms
         valid_statuses = { 200 },
         fall = 2,
@@ -1431,12 +1429,12 @@ init_worker_by_lua '
         ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
         return
     end
-';
+}
 }
 --- config
     location = /t {
         access_log off;
-        content_by_lua '
+        content_by_lua_block {
             ngx.sleep(0.52)
 
             local hc = require "resty.upstream.healthcheck"
@@ -1446,14 +1444,14 @@ init_worker_by_lua '
                 local res = ngx.location.capture("/proxy")
                 ngx.say("upstream addr: ", res.header["X-Foo"])
             end
-        ';
+        }
     }
 
     location = /proxy {
         proxy_pass http://foo.com/;
-        header_filter_by_lua '
+        header_filter_by_lua_block {
             ngx.header["X-Foo"] = ngx.var.upstream_addr;
-        ';
+        }
     }
 --- request
 GET /t
@@ -1474,7 +1472,8 @@ upstream addr: 127.0.0.1:12354
 --- timeout: 6
 
 
-=== TEST 16: hook_up fires as expected
+
+=== TEST 16: hook_up fires when peer is marked as up
 --- http_config eval
 "$::HttpConfig"
 . q{
@@ -1506,12 +1505,12 @@ server {
 }
 
 lua_shared_dict healthcheck 1m;
-init_worker_by_lua '
+init_worker_by_lua_block {
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
 
     node_up = function(peer)
-        ngx.log(ngx.WARN, peer.name .. " marked as up")
+        ngx.log(ngx.WARN, peer.name, " marked as up")
     end
 
     -- mock a previous failure
@@ -1522,7 +1521,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "http",
-        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        http_req = "GET /status HTTP/1.0\r\nHost: localhost\r\n\r\n",
         interval = 100,  -- 100ms
         valid_statuses = { 200 },
         fall = 2,
@@ -1532,12 +1531,12 @@ init_worker_by_lua '
         ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
         return
     end
-';
+}
 }
 --- config
     location = /t {
         access_log off;
-        content_by_lua '
+        content_by_lua_block {
             ngx.sleep(0.52)
 
             local hc = require "resty.upstream.healthcheck"
@@ -1547,7 +1546,7 @@ init_worker_by_lua '
                 local res = ngx.location.capture("/proxy")
                 ngx.say("upstream addr: ", res.header["X-Foo"])
             end
-        ';
+        }
     }
 
     location = /proxy {
