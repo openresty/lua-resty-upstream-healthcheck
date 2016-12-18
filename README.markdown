@@ -285,7 +285,7 @@ Copyright and License
 
 This module is licensed under the BSD license.
 
-Copyright (C) 2014-2016, by Yichun "agentzh" Zhang, OpenResty Inc.
+Copyright (C) 2014-2017, by Yichun "agentzh" Zhang, OpenResty Inc.
 
 All rights reserved.
 
