@@ -607,12 +607,12 @@ function _M.spawn_checker(opts)
 
     local hook_down = opts.hook_down
     if hook_down and type(hook_down) ~= "function" then
-        return nil, 'hook_down must be a function'
+        return nil, "hook_down must be a function"
     end
 
     local hook_up = opts.hook_up
     if hook_up and type(hook_up) ~= "function" then
-        return nil, 'hook_up must be a function'
+        return nil, "hook_up must be a function"
     end
 
     local ppeers, err = get_primary_peers(u)
