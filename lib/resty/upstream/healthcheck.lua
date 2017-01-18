@@ -10,14 +10,14 @@ local re_find = ngx.re.find
 local new_timer = ngx.timer.at
 local shared = ngx.shared
 local debug_mode = ngx.config.debug
-local worker_pid = ngx.worker.pid
 local concat = table.concat
 local tonumber = tonumber
+local tostring = tostring
 local ipairs = ipairs
 local ceil = math.ceil
-local fmod = math.fmod
 local spawn = ngx.thread.spawn
 local wait = ngx.thread.wait
+local pcall = pcall
 
 local _M = {
     _VERSION = '0.03'
@@ -44,6 +44,8 @@ local set_peer_down = upstream.set_peer_down
 local get_primary_peers = upstream.get_primary_peers
 local get_backup_peers = upstream.get_backup_peers
 local get_upstreams = upstream.get_upstreams
+
+local upstream_checker_statuses = {}
 
 local function info(...)
     log(INFO, "healthcheck: ", ...)
@@ -199,8 +201,15 @@ local function peer_ok(ctx, is_backup, id, peer)
     end
 end
 
+-- shortcut error function for check_peer()
+local function peer_error(ctx, is_backup, id, peer, ...)
+  if not peer.down then
+      errlog(...)
+  end
+  peer_fail(ctx, is_backup, id, peer)
+end
+
 local function check_peer(ctx, id, peer, is_backup)
-    local u = ctx.upstream
     local ok, err
     local name = peer.name
     local statuses = ctx.statuses
@@ -221,70 +230,56 @@ local function check_peer(ctx, id, peer, is_backup)
         ok, err = sock:connect(name)
     end
     if not ok then
-        if not peer.down then
-            errlog("failed to connect to ", name, ": ", err)
-        end
-        peer_fail(ctx, is_backup, id, peer)
-        return
+        return peer_error(ctx, is_backup, id, peer, "failed to connect to ", name, ": ", err)
     end
 
     if ctx.type == "https" then
         local session, err = sock:sslhandshake(nil, name, ctx.ssl_verify)
         if not session then
             errlog("failed to do SSL handshake: ", name, ": ", err)
-            sock:close()
-            return
+            return sock:close()
         end
     end
 
     local bytes, err = sock:send(req)
     if not bytes then
-        if not peer.down then
-            errlog("failed to send request to ", name, ": ", err)
-        end
-        peer_fail(ctx, is_backup, id, peer)
-        sock:close()
-        return
+        peer_error(ctx, is_backup, id, peer,
+                   "failed to send request to ", name, ": ", err)
+        return sock:close()
     end
 
     local status_line, err = sock:receive()
     if not status_line then
-        if not peer.down then
-            errlog("failed to receive status line from ", name,
-                   ": ", err)
+        peer_error(ctx, is_backup, id, peer,
+                   "failed to receive status line from ", name, ": ", err)
+        if err == "timeout" then
+            sock:close()  -- timeout errors do not close the socket.
         end
-        peer_fail(ctx, is_backup, id, peer)
-        sock:close()
         return
     end
-
-    sock:close()
 
     if statuses then
         local from, to, err = re_find(status_line,
                                       [[^HTTP/\d+\.\d+\s+(\d+)]],
                                       "joi", nil, 1)
         if not from then
-            if not peer.down then
-                errlog("bad status line from ", name, ": ",
+            peer_error(ctx, is_backup, id, peer,
+                       "bad status line from ", name, ": ",
                        status_line)
-            end
-            peer_fail(ctx, is_backup, id, peer)
-        else
-            local status = tonumber(sub(status_line, from, to))
-            if not statuses[status] then
-                if not peer.down then
-                    errlog("bad status code from ",
-                           name, ": ", status)
-                end
-                peer_fail(ctx, is_backup, id, peer)
-            else
-                peer_ok(ctx, is_backup, id, peer)
-            end
+            return sock:close()
         end
-    else
-        peer_ok(ctx, is_backup, id, peer)
+        
+        local status = tonumber(sub(status_line, from, to))
+        if not statuses[status] then
+            peer_error(ctx, is_backup, id, peer,
+                       "bad status code from ", name, ": ",
+                       status)
+            return sock:close()
+        end
     end
+
+    peer_ok(ctx, is_backup, id, peer)
+    sock:close()
 end
 
 local function check_peer_range(ctx, from, to, peers, is_backup)
@@ -294,9 +289,6 @@ local function check_peer_range(ctx, from, to, peers, is_backup)
 end
 
 local function check_peers(ctx, peers, is_backup)
-    local statuses = ctx.statuses
-    local req = ctx.http_req
-
     local n = #peers
     if n == 0 then
         return
@@ -483,6 +475,21 @@ local function do_check(ctx)
     end
 end
 
+local function update_upstream_checker_status(upstream, success)
+    local cnt = upstream_checker_statuses[upstream]
+    if not cnt then
+        cnt = 0
+    end
+
+    if success then
+        cnt = cnt + 1
+    else
+        cnt = cnt - 1
+    end
+
+    upstream_checker_statuses[upstream] = cnt
+end
+
 local check
 check = function (premature, ctx)
     if premature then
@@ -499,6 +506,8 @@ check = function (premature, ctx)
         if err ~= "process exiting" then
             errlog("failed to create timer: ", err)
         end
+
+        update_upstream_checker_status(ctx.upstream, false)
         return
     end
 end
@@ -508,11 +517,12 @@ local function preprocess_peers(peers)
     for i = 1, n do
         local p = peers[i]
         local name = p.name
+
         if name then
-            local idx = str_find(name, ":", 1, true)
-            if idx then
-                p.host = sub(name, 1, idx - 1)
-                p.port = tonumber(sub(name, idx + 1))
+            local from, to, err = re_find(name, [[^(.*):\d+$]], "jo", nil, 1)
+            if from then
+                p.host = sub(name, 1, to)
+                p.port = tonumber(sub(name, to + 2))
             end
         end
     end
@@ -625,6 +635,8 @@ function _M.spawn_checker(opts)
         return nil, "failed to create timer: " .. err
     end
 
+    update_upstream_checker_status(u, true)
+
     return true
 end
 
@@ -661,10 +673,19 @@ function _M.status_page()
         end
 
         local u = us[i]
+
         bits[idx] = "Upstream "
         bits[idx + 1] = u
-        bits[idx + 2] = "\n    Primary Peers\n"
-        idx = idx + 3
+        idx = idx + 2
+
+        local ncheckers = upstream_checker_statuses[u]
+        if not ncheckers or ncheckers == 0 then
+            bits[idx] = " (NO checkers)"
+            idx = idx + 1
+        end
+
+        bits[idx] = "\n    Primary Peers\n"
+        idx = idx + 1
 
         local peers, err = get_primary_peers(u)
         if not peers then
