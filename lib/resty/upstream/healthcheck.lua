@@ -554,6 +554,7 @@ function _M.spawn_checker(opts)
     local interval = opts.interval
     if not interval then
         interval = 1
+
     else
         interval = interval / 1000
         if interval < 0.002 then  -- minimum 2ms
