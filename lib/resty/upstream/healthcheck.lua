@@ -234,8 +234,8 @@ local function check_peer(ctx, id, peer, is_backup)
     end
 
     if ctx.type == "https" then
-        local session, err = sock:sslhandshake(nil, name, ctx.ssl_verify)
-        if not session then
+        ctx.session, err = sock:sslhandshake(ctx.session, name, ctx.ssl_verify)
+        if not ctx.session then
             errlog("failed to do SSL handshake: ", name, ": ", err)
             return sock:close()
         end
@@ -629,6 +629,7 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        session = nil,
     }
 
     local ok, err = new_timer(0, check, ctx)
