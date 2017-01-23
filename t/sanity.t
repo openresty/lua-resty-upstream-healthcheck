@@ -1401,6 +1401,7 @@ init_worker_by_lua '
         shm = "healthcheck",
         upstream = "foo.com",
         type = "https",
+        ssl_reuse_session = true,
         http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         fall = 2,
@@ -1527,6 +1528,7 @@ init_worker_by_lua '
         upstream = "foo.com",
         type = "https",
         ssl_verify = true,
+        ssl_reuse_session = true,
         http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
         fall = 2,
@@ -1623,3 +1625,64 @@ Upstream foo.com
 
 --- error_log
 healthcheck: failed to do SSL handshake: 127.0.0.1:443: 18: self signed certificate, context: ngx.timer
+
+
+
+=== TEST 19: SSL health check without session reuse
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:443;
+}
+
+server {
+    listen 443;
+    ssl on;
+    ssl_certificate ../../ssl/nginx.crt;
+    ssl_certificate_key ../../ssl/nginx.key;
+    location = /status {
+        return 200;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "https",
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 2,
+        valid_statuses = {200},
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:443 up
+    Backup Peers
+
+--- no_error_log
+SSL reused session

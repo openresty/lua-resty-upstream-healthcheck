@@ -234,11 +234,14 @@ local function check_peer(ctx, id, peer, is_backup)
     end
 
     if ctx.type == "https" then
-        ctx.session, err = sock:sslhandshake(ctx.session, name, ctx.ssl_verify)
-        if not ctx.session then
+        session, err = sock:sslhandshake(ctx.session, name, ctx.ssl_verify)
+        if not session then
             peer_error(ctx, is_backup, id, peer,
                        "failed to do SSL handshake: ", name, ": ", err)
             return sock:close()
+        end
+        if ctx.ssl_reuse_session then
+            ctx.session = session
         end
     end
 
@@ -542,6 +545,8 @@ function _M.spawn_checker(opts)
 
     local ssl_verify = opts.ssl_verify and true
 
+    local ssl_reuse_session = opts.ssl_reuse_session and true
+
     local http_req = opts.http_req
     if not http_req then
         return nil, "\"http_req\" option required"
@@ -621,6 +626,7 @@ function _M.spawn_checker(opts)
         backup_peers = preprocess_peers(bpeers),
         type = typ,
         ssl_verify = ssl_verify,
+        ssl_reuse_session = ssl_reuse_session,
         http_req = http_req,
         timeout = timeout,
         interval = interval,
