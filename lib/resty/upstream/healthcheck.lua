@@ -269,7 +269,7 @@ local function check_peer(ctx, id, peer, is_backup)
                        status_line)
             return sock:close()
         end
-        
+
         local status = tonumber(sub(status_line, from, to))
         if not statuses[status] then
             peer_error(ctx, is_backup, id, peer,
