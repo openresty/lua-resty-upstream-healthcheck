@@ -1431,6 +1431,9 @@ Upstream foo.com
         127.0.0.1:443 up
     Backup Peers
 
+--- error_log
+SSL reused session
+
 
 
 === TEST 16: normal health check against SSL only upstream
@@ -1554,6 +1557,8 @@ Upstream foo.com
         127.0.0.1:443 up
     Backup Peers
 
+--- error_log
+SSL reused session
 
 
 
