@@ -236,7 +236,8 @@ local function check_peer(ctx, id, peer, is_backup)
     if ctx.type == "https" then
         ctx.session, err = sock:sslhandshake(ctx.session, name, ctx.ssl_verify)
         if not ctx.session then
-            errlog("failed to do SSL handshake: ", name, ": ", err)
+            peer_error(ctx, is_backup, id, peer,
+                       "failed to do SSL handshake: ", name, ": ", err)
             return sock:close()
         end
     end
