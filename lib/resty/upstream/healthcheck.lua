@@ -539,6 +539,10 @@ function _M.spawn_checker(opts)
         return nil, "\"http_req\" option required"
     end
 
+    -- this field is OPTIONal: (80 by default)
+    -- used to override upstream ports used for healthchecking
+    local http_port = opts.http_port
+
     local timeout = opts.timeout
     if not timeout then
         timeout = 1000
@@ -621,6 +625,16 @@ function _M.spawn_checker(opts)
         version = 0,
         concurrency = concur,
     }
+
+    -- as far as we do not support https override ports if set
+    if http_port then
+        for i, _ in ipairs(ctx.primary_peers) do
+            ctx.primary_peers[i].port = http_port
+        end
+        for i, peer in ipairs(ctx.backup_peers) do
+            ctx.backup_peers[i].port = http_port
+        end
+    end
 
     local ok, err = new_timer(0, check, ctx)
     if not ok then
