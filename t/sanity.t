@@ -1380,11 +1380,11 @@ healthcheck: peer \[0:0::1\]:12356 was checked to be ok
 "$::HttpConfig"
 . q{
 upstream foo.com {
-    server 127.0.0.1:443;
+    server 127.0.0.1:12355;
 }
 
 server {
-    listen 443;
+    listen 12355;
     ssl on;
     ssl_certificate ../../ssl/nginx.crt;
     ssl_certificate_key ../../ssl/nginx.key;
@@ -1429,7 +1429,7 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:443 up
+        127.0.0.1:12355 up
     Backup Peers
 
 --- error_log
@@ -1442,11 +1442,11 @@ SSL reused session
 "$::HttpConfig"
 . q{
 upstream foo.com {
-    server 127.0.0.1:443;
+    server 127.0.0.1:12355;
 }
 
 server {
-    listen 443;
+    listen 12355;
     ssl on;
     ssl_certificate ../../ssl/nginx.crt;
     ssl_certificate_key ../../ssl/nginx.key;
@@ -1490,12 +1490,11 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:443 DOWN
+        127.0.0.1:12355 DOWN
     Backup Peers
 
 --- error_log
-healthcheck: bad status code from 127.0.0.1:443: 400, context: ngx.timer
-
+healthcheck: bad status code from 127.0.0.1:12355: 400, context: ngx.timer
 
 
 
@@ -1506,11 +1505,11 @@ healthcheck: bad status code from 127.0.0.1:443: 400, context: ngx.timer
 lua_ssl_trusted_certificate ../../ssl/nginx.crt;
 
 upstream foo.com {
-    server 127.0.0.1:443;
+    server 127.0.0.1:12355;
 }
 
 server {
-    listen 443;
+    listen 12355;
     ssl on;
     ssl_certificate ../../ssl/nginx.crt;
     ssl_certificate_key ../../ssl/nginx.key;
@@ -1556,7 +1555,7 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:443 up
+        127.0.0.1:12355 up
     Backup Peers
 
 --- error_log
@@ -1571,11 +1570,11 @@ SSL reused session
 lua_ssl_trusted_certificate ../../ssl/nginx_other.crt;
 
 upstream foo.com {
-    server 127.0.0.1:443;
+    server 127.0.0.1:12355;
 }
 
 server {
-    listen 443;
+    listen 12355;
     ssl on;
     ssl_certificate ../../ssl/nginx.crt;
     ssl_certificate_key ../../ssl/nginx.key;
@@ -1620,11 +1619,11 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:443 DOWN
+        127.0.0.1:12355 DOWN
     Backup Peers
 
 --- error_log
-healthcheck: failed to do SSL handshake: 127.0.0.1:443: 18: self signed certificate, context: ngx.timer
+healthcheck: failed to do SSL handshake: 127.0.0.1:12355: 18: self signed certificate, context: ngx.timer
 
 
 
@@ -1633,11 +1632,11 @@ healthcheck: failed to do SSL handshake: 127.0.0.1:443: 18: self signed certific
 "$::HttpConfig"
 . q{
 upstream foo.com {
-    server 127.0.0.1:443;
+    server 127.0.0.1:12355;
 }
 
 server {
-    listen 443;
+    listen 12355;
     ssl on;
     ssl_certificate ../../ssl/nginx.crt;
     ssl_certificate_key ../../ssl/nginx.key;
@@ -1681,7 +1680,7 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:443 up
+        127.0.0.1:12355 up
     Backup Peers
 
 --- no_error_log
