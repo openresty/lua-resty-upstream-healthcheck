@@ -9,7 +9,7 @@ use Cwd qw(cwd);
 
 #repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6 + 9);
+plan tests => repeat_each() * (blocks() * 6 - 6);
 
 my $pwd = cwd();
 
@@ -1372,3 +1372,317 @@ healthcheck: peer \[0:0::1\]:12356 was checked to be ok
 ){3,7}$/
 --- timeout: 6
 --- skip_eval: 8: system("ping6 -c 1 ::1 >/dev/null 2>&1") ne 0
+
+
+
+=== TEST 15: SSL health check without server certificate verification
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:443;
+}
+
+server {
+    listen 443;
+    ssl on;
+    ssl_certificate ../../ssl/nginx.crt;
+    ssl_certificate_key ../../ssl/nginx.key;
+    location = /status {
+        return 200;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "https",
+        ssl_reuse_session = true,
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 2,
+        valid_statuses = {200},
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:443 up
+    Backup Peers
+
+--- error_log
+SSL reused session
+
+
+
+=== TEST 16: normal health check against SSL only upstream
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:443;
+}
+
+server {
+    listen 443;
+    ssl on;
+    ssl_certificate ../../ssl/nginx.crt;
+    ssl_certificate_key ../../ssl/nginx.key;
+    location = /status {
+        return 200;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "http",
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 2,
+        valid_statuses = {200},
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:443 DOWN
+    Backup Peers
+
+--- error_log
+healthcheck: bad status code from 127.0.0.1:443: 400, context: ngx.timer
+
+
+
+
+=== TEST 17: SSL health check with server certificate verification
+--- http_config eval
+"$::HttpConfig"
+. q{
+lua_ssl_trusted_certificate ../../ssl/nginx.crt;
+
+upstream foo.com {
+    server 127.0.0.1:443;
+}
+
+server {
+    listen 443;
+    ssl on;
+    ssl_certificate ../../ssl/nginx.crt;
+    ssl_certificate_key ../../ssl/nginx.key;
+    location = /status {
+        return 200;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "https",
+        ssl_verify = true,
+        ssl_reuse_session = true,
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 2,
+        valid_statuses = {200},
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:443 up
+    Backup Peers
+
+--- error_log
+SSL reused session
+
+
+
+=== TEST 18: SSL health check with server certificate verification, failure scenario
+--- http_config eval
+"$::HttpConfig"
+. q{
+lua_ssl_trusted_certificate ../../ssl/nginx_other.crt;
+
+upstream foo.com {
+    server 127.0.0.1:443;
+}
+
+server {
+    listen 443;
+    ssl on;
+    ssl_certificate ../../ssl/nginx.crt;
+    ssl_certificate_key ../../ssl/nginx.key;
+    location = /status {
+        return 200;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "https",
+        ssl_verify = true,
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 2,
+        valid_statuses = {200},
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:443 DOWN
+    Backup Peers
+
+--- error_log
+healthcheck: failed to do SSL handshake: 127.0.0.1:443: 18: self signed certificate, context: ngx.timer
+
+
+
+=== TEST 19: SSL health check without session reuse
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:443;
+}
+
+server {
+    listen 443;
+    ssl on;
+    ssl_certificate ../../ssl/nginx.crt;
+    ssl_certificate_key ../../ssl/nginx.key;
+    location = /status {
+        return 200;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "https",
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 2,
+        valid_statuses = {200},
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:443 up
+    Backup Peers
+
+--- no_error_log
+SSL reused session
