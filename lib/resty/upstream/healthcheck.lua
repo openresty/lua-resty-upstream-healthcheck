@@ -20,7 +20,7 @@ local wait = ngx.thread.wait
 local pcall = pcall
 
 local _M = {
-    _VERSION = '0.03'
+    _VERSION = '0.04'
 }
 
 if not ngx.config
