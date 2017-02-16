@@ -9,7 +9,7 @@ use Cwd qw(cwd);
 
 #repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6 - 13);
+plan tests => repeat_each() * (blocks() * 6 - 18);
 
 my $pwd = cwd();
 
@@ -1887,3 +1887,82 @@ SSL reused session
 
 --- no_error_log
 certificate host mismatch
+
+
+
+=== TEST 23: status_table should return peers with correct properties
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12355;
+}
+upstream bar.com {
+    server 127.0.0.1:12356;
+    server 127.0.0.1:12357 backup;
+}
+server {
+    listen 12355;
+    location = /status {
+        return 200;
+    }
+}
+server {
+    listen 12356;
+    location = /status {
+        return 404;
+    }
+}
+server {
+    listen 12357;
+    location = /status {
+        return 200;
+    }
+}
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua_block {
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    upstreams = {"foo.com", "bar.com"}
+    for i = 1,2 do
+      local ok, err = hc.spawn_checker{
+          shm = "healthcheck",
+          upstream = upstreams[i],
+          type = "http",
+          http_req = "GET /status HTTP/1.0\r\nHost: localhost\r\n\r\n",
+          interval = 100,  -- 100ms
+          fall = 2,
+          valid_statuses = {200},
+      }
+      if not ok then
+          ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+          return
+      end
+    end
+}
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua_block {
+            ngx.sleep(0.52)
+            local hc = require "resty.upstream.healthcheck"
+            local status_table = hc.status_table("healthcheck")
+            local p12355 = status_table["foo.com"].primary_peers[1]
+            if p12355.checks_ok ~= 6 or p12355.unhealthy ~= false or p12355.checks_fail ~= 0 then
+              ngx.exit(500)
+            end
+            ngx.sleep(0.21)
+            status_table = hc.status_table("healthcheck")
+            local p12356 = status_table["bar.com"].primary_peers[1]
+            if p12356.checks_fail ~= 8 or p12356.unhealthy ~= true or p12356.checks_ok ~= 0 then
+              ngx.exit(500)
+            end
+            local p12357 = status_table["bar.com"].backup_peers[1]
+            if p12357.checks_ok ~= 8 or p12357.unhealthy ~= false or p12357.checks_fail ~= 0 then
+              ngx.exit(500)
+            end
+        }
+    }
+--- request
+GET /t
