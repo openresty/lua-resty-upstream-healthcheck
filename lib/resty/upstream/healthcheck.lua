@@ -235,7 +235,8 @@ local function check_peer(ctx, id, peer, is_backup)
     end
 
     if ctx.type == "https" then
-        local session, err = sock:sslhandshake(ctx.session, name,
+        local session, err = sock:sslhandshake(ctx.session,
+                                               ctx.ssl_server_name or name,
                                                ctx.ssl_verify)
         if not session then
             peer_error(ctx, is_backup, id, peer,
@@ -629,6 +630,7 @@ function _M.spawn_checker(opts)
         type = typ,
         ssl_verify = ssl_verify,
         ssl_reuse_session = ssl_reuse_session,
+        ssl_server_name = opts.ssl_server_name,
         http_req = http_req,
         timeout = timeout,
         interval = interval,
