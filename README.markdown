@@ -55,7 +55,7 @@ http {
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
             
-            type = "http"
+            type = "http",
             -- type = "https",
             -- ssl_verify = true, -- verify SSL certs
             -- ssl_reuse_session = true, -- this makes sure SSL session will be reused
