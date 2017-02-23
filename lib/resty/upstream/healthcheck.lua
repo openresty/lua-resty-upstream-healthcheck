@@ -20,7 +20,7 @@ local wait = ngx.thread.wait
 local pcall = pcall
 
 local _M = {
-    _VERSION = '0.04'
+    _VERSION = '0.05'
 }
 
 if not ngx.config
@@ -720,6 +720,69 @@ function _M.status_page()
         idx = gen_peers_status_info(peers, bits, idx)
     end
     return concat(bits)
+end
+
+local function gen_peers_status_table(dict, peers, name, is_backup)
+    local npeers = #peers
+
+    for i = 1, npeers do
+        local peer = peers[i]
+
+        local oks, err = dict:get(gen_peer_key("ok:", name, is_backup, i - 1))
+        if oks then
+            peer.checks_ok = oks
+            if oks > 0 then
+                peer.unhealthy = false
+                peer.checks_fail = 0
+            end
+        end
+
+        if peer.unhealthy == nil then
+            local key = gen_peer_key("nok:", name, is_backup, i - 1)
+            local fails, err = dict:get(key)
+            if fails then
+                peer.checks_fail = fails
+                if fails > 0 then
+                    peer.unhealthy = true
+                    peer.checks_ok = 0
+                end
+            end
+        end
+    end
+end
+
+function _M.status_table(shm)
+    local result = {}
+    local dict = shared[shm]
+
+    local us, err = get_upstreams()
+    if not us then
+        return nil, "failed to get upstream names: " .. err
+    end
+
+    local n = #us
+    for i = 1, n do
+        local u = us[i]
+
+        local ppeers, err = get_primary_peers(u)
+        if not ppeers then
+            return nil, "failed to get primary peers: " .. err
+        end
+        gen_peers_status_table(dict, ppeers, u, false)
+
+        local bpeers, err = get_backup_peers(u)
+        if not bpeers then
+            return nil, "failed to get backup peers: " .. err
+        end
+        gen_peers_status_table(dict, bpeers, u, true)
+
+        result[u] = {
+            primary_peers = ppeers,
+            backup_peers = bpeers,
+        }
+    end
+
+    return result
 end
 
 return _M
