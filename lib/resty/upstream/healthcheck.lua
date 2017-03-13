@@ -524,7 +524,7 @@ local function preprocess_peers(peers)
     return peers
 end
 
-function _M.spawn_checker(opts)
+function _M.check_and_set_config( opts )
     local typ = opts.type
     if not typ then
         return nil, "\"type\" option required"
@@ -606,8 +606,7 @@ function _M.spawn_checker(opts)
     if not bpeers then
         return nil, "failed to get backup peers: " .. err
     end
-
-    local ctx = {
+    local  ctx  = {
         upstream = u,
         primary_peers = preprocess_peers(ppeers),
         backup_peers = preprocess_peers(bpeers),
@@ -622,13 +621,24 @@ function _M.spawn_checker(opts)
         concurrency = concur,
     }
 
+    if opts.shared_config then 
+        for k,v in pairs(ctx) do
+            opts.shared_config[k] = v
+        end
+
+        return opts.shared_config
+    end
+
+    return ctx;
+end
+
+function _M.spawn_checker(opts)
+    local ctx = _M.check_and_set_config(opts)
     local ok, err = new_timer(0, check, ctx)
     if not ok then
         return nil, "failed to create timer: " .. err
     end
-
-    update_upstream_checker_status(u, true)
-
+    update_upstream_checker_status( ctx.upstream, true)
     return true
 end
 
