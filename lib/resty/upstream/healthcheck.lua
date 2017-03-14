@@ -524,6 +524,7 @@ local function preprocess_peers(peers)
     return peers
 end
 
+local config = {}
 function _M.check_and_set_config( opts )
     local typ = opts.type
     if not typ then
@@ -621,15 +622,13 @@ function _M.check_and_set_config( opts )
         concurrency = concur,
     }
 
-    if opts.shared_config then 
-        for k,v in pairs(ctx) do
-            opts.shared_config[k] = v
-        end
+    config = opts.shared_config or config
 
-        return opts.shared_config
+    for k,v in pairs(ctx) do
+        config [k] = v
     end
 
-    return ctx;
+    return config
 end
 
 function _M.spawn_checker(opts)
