@@ -607,7 +607,7 @@ function _M.check_and_set_config( opts )
     if not bpeers then
         return nil, "failed to get backup peers: " .. err
     end
-    local  ctx  = {
+    config  = {
         upstream = u,
         primary_peers = preprocess_peers(ppeers),
         backup_peers = preprocess_peers(bpeers),
@@ -621,13 +621,7 @@ function _M.check_and_set_config( opts )
         version = 0,
         concurrency = concur,
     }
-
-    config = opts.shared_config or config
-
-    for k,v in pairs(ctx) do
-        config [k] = v
-    end
-
+    
     return config
 end
 
