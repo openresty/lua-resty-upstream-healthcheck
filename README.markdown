@@ -45,6 +45,7 @@ http {
 
     # the size depends on the number of servers in upstream {}:
     lua_shared_dict healthcheck 1m;
+    lua_shared_dict healthcheck_config 1m;
 
     lua_socket_log_errors off;
 
@@ -65,6 +66,7 @@ http {
             rise = 2,  -- # of successive successes before turning a peer up
             valid_statuses = {200, 302},  -- a list valid HTTP status code
             concurrency = 10,  -- concurrency level for test requests
+            shared_config = true, -- whether shared config between the worker
         }
         if not ok then
             ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
@@ -91,6 +93,40 @@ http {
                 local hc = require "resty.upstream.healthcheck"
                 ngx.say("Nginx Worker PID: ", ngx.worker.pid())
                 ngx.print(hc.status_page())
+            }
+        }
+        # by this location can modify the conf passing to `spawn_checker` above
+        location = /health{
+            content_by_lua_block{
+                    local hc = require "resty.upstream.healthcheck"
+                    local ok, err = hc.check_and_set_config{
+                        shm = "healthcheck",  -- defined by "lua_shared_dict"
+                        upstream = "default_upstream", -- defined by "upstream"
+                        type = "http",
+
+                        http_req = "GET /status HTTP/1.0\r\nHost: localhost\r\n\r\n",
+                                -- raw HTTP request for checking
+                        interval = 7000,  -- run the check cycle every 7 sec
+                        timeout = 8000,   -- 8 sec is the timeout for network operations
+                        fall = 3,  -- # of successive failures before turning a peer down
+                        rise = 2,  -- # of successive successes before turning a peer up
+                        valid_statuses = {200, 302},  -- a list valid HTTP status code
+                        concurrency = 10,  -- concurrency level for test requests
+                        shared_config=true,
+                    }
+
+                    if not ok then
+                        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+                        return
+                    end
+
+                    ngx.say(ngx.ERR,'-------------------------------',cjson.encode(ok),cjson.encode(context.healthcheck_config));
+
+
+                    -- Just call hc.spawn_checker() for more times here if you have
+                    -- more upstream groups to monitor. One call for one upstream group.
+                    -- They can all share the same shm zone without conflicts but they
+                    -- need a bigger shm zone for obvious reasons.
             }
         }
     }
