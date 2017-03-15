@@ -10,24 +10,31 @@ function _M:refresh()
     return not no_update
 end
 
+function _M:mark_worker_update_finish()
+    shared_config:set(no_update_flag .. ngx.worker.id(),true)
+end
+
+function _M:mark_worker_shared_conf_updated()
+    local worker_num = ngx.worker.count() - 1
+    for i =0 , worker_num do
+        shared_config:set(no_update_flag .. i , false)
+    end
+end
+
 function _M:get()
     local v,err = shared_config:get(config_flag)
 
     if not v then
         ngx.log(ngx.ERR,err)
+        return ngx.null
     end
-
-    shared_config:set(no_update_flag,true)
 
     return cjson.decode(v)
 end
 
 function _M:set(conf)
     shared_config:set(config_flag,cjson.encode(conf))
-    local worker_num = ngx.worker.count() - 1
-    for i =0 , worker_num do
-        shared_config:set(no_update_flag .. i , false)
-    end
+    self:mark_worker_shared_conf_updated()
 end
 
 return _M

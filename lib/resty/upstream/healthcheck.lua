@@ -494,6 +494,7 @@ check = function (premature, ctx)
 
     if ctx.shared_config and shared_config:refresh() then
         ctx = _M.check_and_set_config(shared_config:get())
+        shared_config:mark_worker_update_finish()
     end
 
     local ok, err = pcall(do_check, ctx)
