@@ -1372,3 +1372,105 @@ healthcheck: peer \[0:0::1\]:12356 was checked to be ok
 ){3,7}$/
 --- timeout: 6
 --- skip_eval: 8: system("ping6 -c 1 ::1 >/dev/null 2>&1") ne 0
+
+
+=== TEST 15: health check using different port
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+    server 127.0.0.1:12355;
+}
+
+server {
+    listen 12354;
+    location = /status {
+        return 200;
+    }
+}
+
+server {
+    listen 12355;
+    location = /status {
+        return 404;
+    }
+}
+
+server {
+    listen 12356;
+    location = /healthz {
+        return 200;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "http",
+        http_req = "GET /healthz HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 2,
+        port = 12356,
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
+
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
+        ';
+    }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 up
+    Backup Peers
+        127.0.0.1:12356 up
+upstream addr: 127.0.0.1:12354
+upstream addr: 127.0.0.1:12355
+
+--- no_error_log
+[error]
+[alert]
+[warn]
+was checked to be not ok
+failed to run healthcheck cycle
+--- grep_error_log eval: qr/healthcheck: .*? was checked .*|publishing peers version \d+|upgrading peers version to \d+/
+--- grep_error_log_out eval
+qr/^healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
+healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
+healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
+(?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
+healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
+healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
+){3,5}$/
+--- timeout: 6
