@@ -1453,6 +1453,7 @@ Upstream foo.com
     Primary Peers
         127.0.0.1:12354 up
         127.0.0.1:12355 up
+    Backup Peers
 upstream addr: 127.0.0.1:12354
 upstream addr: 127.0.0.1:12355
 
