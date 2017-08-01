@@ -1,10 +1,8 @@
 local stream_sock = ngx.socket.tcp
 local log = ngx.log
 local ERR = ngx.ERR
-local INFO = ngx.INFO
 local WARN = ngx.WARN
 local DEBUG = ngx.DEBUG
-local str_find = string.find
 local sub = string.sub
 local re_find = ngx.re.find
 local new_timer = ngx.timer.at
@@ -46,10 +44,6 @@ local get_backup_peers = upstream.get_backup_peers
 local get_upstreams = upstream.get_upstreams
 
 local upstream_checker_statuses = {}
-
-local function info(...)
-    log(INFO, "healthcheck: ", ...)
-end
 
 local function warn(...)
     log(WARN, "healthcheck: ", ...)
