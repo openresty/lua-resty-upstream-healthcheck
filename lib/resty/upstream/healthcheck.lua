@@ -18,7 +18,7 @@ local wait = ngx.thread.wait
 local pcall = pcall
 
 local _M = {
-    _VERSION = '0.03'
+    _VERSION = '0.04'
 }
 
 if not ngx.config
@@ -224,16 +224,29 @@ local function check_peer(ctx, id, peer, is_backup)
         ok, err = sock:connect(name)
     end
     if not ok then
-        if not peer.down then
-            errlog("failed to connect to ", name, ": ", err)
+        return peer_error(ctx, is_backup, id, peer,
+                          "failed to connect to ", name, ": ", err)
+    end
+
+    if ctx.type == "https" then
+        local session, err = sock:sslhandshake(ctx.session,
+                                               ctx.ssl_server_name or name,
+                                               ctx.ssl_verify)
+        if not session then
+            peer_error(ctx, is_backup, id, peer,
+                       "failed to do SSL handshake: ", name, ": ", err)
+            return sock:close()
         end
-        return peer_fail(ctx, is_backup, id, peer)
+        if ctx.ssl_reuse_session then
+            ctx.session = session
+        end
     end
 
     local bytes, err = sock:send(req)
     if not bytes then
-        return peer_error(ctx, is_backup, id, peer,
-                          "failed to send request to ", name, ": ", err)
+        peer_error(ctx, is_backup, id, peer,
+                   "failed to send request to ", name, ": ", err)
+        return sock:close()
     end
 
     local status_line, err = sock:receive()
@@ -254,16 +267,15 @@ local function check_peer(ctx, id, peer, is_backup)
             peer_error(ctx, is_backup, id, peer,
                        "bad status line from ", name, ": ",
                        status_line)
-            sock:close()
-            return
+            return sock:close()
         end
 
         local status = tonumber(sub(status_line, from, to))
         if not statuses[status] then
-            peer_error(ctx, is_backup, id, peer, "bad status code from ",
-                       name, ": ", status)
-            sock:close()
-            return
+            peer_error(ctx, is_backup, id, peer,
+                       "bad status code from ", name, ": ",
+                       status)
+            return sock:close()
         end
     end
 
@@ -524,9 +536,13 @@ function _M.spawn_checker(opts)
         return nil, "\"type\" option required"
     end
 
-    if typ ~= "http" then
-        return nil, "only \"http\" type is supported right now"
+    if typ ~= "http" and typ ~= "https" then
+        return nil, "no support for this protocol type"
     end
+
+    local ssl_verify = opts.ssl_verify and true
+
+    local ssl_reuse_session = opts.ssl_reuse_session and true
 
     local http_req = opts.http_req
     if not http_req then
@@ -605,6 +621,10 @@ function _M.spawn_checker(opts)
         upstream = u,
         primary_peers = preprocess_peers(ppeers),
         backup_peers = preprocess_peers(bpeers),
+        type = typ,
+        ssl_verify = ssl_verify,
+        ssl_reuse_session = ssl_reuse_session,
+        ssl_server_name = opts.ssl_server_name,
         http_req = http_req,
         timeout = timeout,
         interval = interval,
@@ -614,6 +634,7 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        session = nil,
     }
 
     local ok, err = new_timer(0, check, ctx)
