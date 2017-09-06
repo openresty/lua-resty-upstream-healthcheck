@@ -68,7 +68,7 @@ http {
             rise = 2,  -- # of successive successes before turning a peer up
             valid_statuses = {200, 302},  -- a list valid HTTP status code
             concurrency = 10,  -- concurrency level for test requests
-        }
+        }        
         if not ok then
             ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
             return
@@ -83,7 +83,7 @@ http {
         
         local ok, err = hc.spawn_checker{
             shm = "healthcheck",  -- defined by "lua_shared_dict"
-            upstream = "foo.com", -- defined by "upstream"
+            upstream = "goo.com", -- defined by "upstream"
             type = "tcp",
             interval = 2000,  -- run the check cycle every 2 sec
             timeout = 1000,   -- 1 sec is the timeout for network operations
