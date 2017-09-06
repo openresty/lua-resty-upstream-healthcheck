@@ -42,11 +42,6 @@ http {
         server 127.0.0.1:12355;
         server 127.0.0.1:12356 backup;
     }
-    upstream goo.com {
-        server 127.0.0.1:12314;
-        server 127.0.0.1:12315;
-        server 127.0.0.1:12316 backup;
-    }
 
     # the size depends on the number of servers in upstream {}:
     lua_shared_dict healthcheck 1m;
@@ -59,31 +54,27 @@ http {
         local ok, err = hc.spawn_checker{
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
-            type = "http",            
+            type = "http",
+
             http_req = "GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n",
                     -- raw HTTP request for checking
+
             interval = 2000,  -- run the check cycle every 2 sec
             timeout = 1000,   -- 1 sec is the timeout for network operations
             fall = 3,  -- # of successive failures before turning a peer down
             rise = 2,  -- # of successive successes before turning a peer up
             valid_statuses = {200, 302},  -- a list valid HTTP status code
             concurrency = 10,  -- concurrency level for test requests
-        }        
+        }
         if not ok then
             ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
             return
         end
-
-        -- Just call hc.spawn_checker() for more times here if you have
-        -- more upstream groups to monitor. One call for one upstream group.
-        -- They can all share the same shm zone without conflicts but they
-        -- need a bigger shm zone for obvious reasons.
         
-        -- example of helthcheck for tcp
-        
-        local ok, err = hc.spawn_checker{
+        -- Example of HealthCheck for Tcp
+        local ok, err = hc.spawn_checker{
             shm = "healthcheck",  -- defined by "lua_shared_dict"
-            upstream = "goo.com", -- defined by "upstream"
+            upstream = "foo.com", -- defined by "upstream"
             type = "tcp",
             interval = 2000,  -- run the check cycle every 2 sec
             timeout = 1000,   -- 1 sec is the timeout for network operations
@@ -92,6 +83,10 @@ http {
             concurrency = 10,  -- concurrency level for test requests
         }
 
+        -- Just call hc.spawn_checker() for more times here if you have
+        -- more upstream groups to monitor. One call for one upstream group.
+        -- They can all share the same shm zone without conflicts but they
+        -- need a bigger shm zone for obvious reasons.
     }
 
     server {
