@@ -228,6 +228,12 @@ local function check_peer(ctx, id, peer, is_backup)
             errlog("failed to connect to ", name, ": ", err)
         end
         return peer_fail(ctx, is_backup, id, peer)
+    else 
+        if ctx.type == "tcp" then
+           peer_ok(ctx, is_backup, id, peer)
+           sock:close()
+           return
+        end    
     end
 
     local bytes, err = sock:send(req)
@@ -524,12 +530,12 @@ function _M.spawn_checker(opts)
         return nil, "\"type\" option required"
     end
 
-    if typ ~= "http" then
+    if typ ~= "http" and typ ~= "tcp" then
         return nil, "only \"http\" type is supported right now"
     end
 
     local http_req = opts.http_req
-    if not http_req then
+    if typ == "http" and not http_req then
         return nil, "\"http_req\" option required"
     end
 
@@ -602,6 +608,7 @@ function _M.spawn_checker(opts)
     end
 
     local ctx = {
+        type = typ,
         upstream = u,
         primary_peers = preprocess_peers(ppeers),
         backup_peers = preprocess_peers(bpeers),
