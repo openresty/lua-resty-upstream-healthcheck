@@ -82,6 +82,7 @@ http {
         -- need a bigger shm zone for obvious reasons.
         
         -- example of helthcheck for tcp
+        
         local ok, err = hc.spawn_checker{
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
