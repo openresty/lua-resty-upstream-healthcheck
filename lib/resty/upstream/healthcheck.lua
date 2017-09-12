@@ -531,7 +531,7 @@ function _M.spawn_checker(opts)
     end
 
     if typ ~= "http" and typ ~= "tcp" then
-        return nil, "only \"http\" type is supported right now"
+        return nil, "only \"http\" or \"tcp\" type is supported right now"
     end
 
     local http_req = opts.http_req
