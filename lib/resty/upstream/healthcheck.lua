@@ -197,10 +197,10 @@ end
 
 -- shortcut error function for check_peer()
 local function peer_error(ctx, is_backup, id, peer, ...)
-  if not peer.down then
-      errlog(...)
-  end
-  peer_fail(ctx, is_backup, id, peer)
+    if not peer.down then
+        errlog(...)
+    end
+    peer_fail(ctx, is_backup, id, peer)
 end
 
 local function check_peer(ctx, id, peer, is_backup)
