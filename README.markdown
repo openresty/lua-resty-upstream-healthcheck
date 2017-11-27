@@ -188,22 +188,20 @@ lua_shared_dict healthcheck 1m;
 lua_socket_log_errors off;
 
 init_worker_by_lua_block {
-    init_worker_by_lua_block {
-        local hc = require "resty.upstream.healthcheck"
+    local hc = require "resty.upstream.healthcheck"
 
-        local ok, err = hc.spawn_checker{
-            shm = "healthcheck",
-            upstream = "foo",
-            ...
-        }
-
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo",
         ...
+    }
 
-        ok, err = hc.spawn_checker{
-            shm = "healthcheck",
-            upstream = "bar",
-            ...
-        }
+    ...
+
+    ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "bar",
+        ...
     }
 }
 ```
