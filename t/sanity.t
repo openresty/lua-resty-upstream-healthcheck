@@ -9,7 +9,7 @@ use Cwd qw(cwd);
 
 #repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6 + 9);
+plan tests => repeat_each() * (blocks() * 6 + 5);
 
 my $pwd = cwd();
 
@@ -1373,3 +1373,203 @@ healthcheck: peer \[0:0::1\]:12356 was checked to be ok
 --- wait: 0.2
 --- timeout: 6
 --- skip_eval: 8: system("ping6 -c 1 ::1 >/dev/null 2>&1") ne 0
+
+
+
+=== TEST 15: hook_down fires when peer is marked as down
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+    server 127.0.0.1:12355;
+    server 127.0.0.1:12356 backup;
+}
+
+server {
+    listen 12354;
+    location = /status {
+        return 200;
+    }
+}
+
+server {
+    listen 12355;
+    location = /status {
+        return 503;
+    }
+}
+
+server {
+    listen 12356;
+    location = /status {
+        return 503;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua_block {
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+
+    node_down = function(peer)
+        ngx.log(ngx.WARN, peer.name, " marked as down")
+    end
+
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "http",
+        http_req = "GET /status HTTP/1.0\r\nHost: localhost\r\n\r\n",
+        interval = 100,  -- 100ms
+        valid_statuses = { 200 },
+        fall = 2,
+        hook_down = node_down,
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+}
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua_block {
+            ngx.sleep(0.52)
+
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
+
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
+        }
+    }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua_block {
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
+        }
+    }
+--- request
+GET /t
+--- response_body
+
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 DOWN
+    Backup Peers
+        127.0.0.1:12356 DOWN
+upstream addr: 127.0.0.1:12354
+upstream addr: 127.0.0.1:12354
+--- error_log
+127.0.0.1:12355 marked as down
+--- no_error_log
+[alert]
+--- timeout: 6
+
+
+
+=== TEST 16: hook_up fires when peer is marked as up
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+    server 127.0.0.1:12355;
+    server 127.0.0.1:12356 backup;
+}
+
+server {
+    listen 12354;
+    location = /status {
+        return 200;
+    }
+}
+
+server {
+    listen 12355;
+    location = /status {
+        return 200;
+    }
+}
+
+server {
+    listen 12356;
+    location = /status {
+        return 503;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua_block {
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+
+    node_up = function(peer)
+        ngx.log(ngx.WARN, peer.name, " marked as up")
+    end
+
+    -- mock a previous failure
+    local upstream = require "ngx.upstream"
+    upstream.set_peer_down("foo.com", false, 1, true)
+
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "http",
+        http_req = "GET /status HTTP/1.0\r\nHost: localhost\r\n\r\n",
+        interval = 100,  -- 100ms
+        valid_statuses = { 200 },
+        fall = 2,
+        hook_up = node_up,
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+}
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua_block {
+            ngx.sleep(0.52)
+
+            local hc = require "resty.upstream.healthcheck"
+            ngx.print(hc.status_page())
+
+            for i = 1, 2 do
+                local res = ngx.location.capture("/proxy")
+                ngx.say("upstream addr: ", res.header["X-Foo"])
+            end
+        }
+    }
+
+    location = /proxy {
+        proxy_pass http://foo.com/;
+        header_filter_by_lua '
+            ngx.header["X-Foo"] = ngx.var.upstream_addr;
+        ';
+    }
+--- request
+GET /t
+--- response_body
+
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+        127.0.0.1:12355 up
+    Backup Peers
+        127.0.0.1:12356 DOWN
+upstream addr: 127.0.0.1:12354
+upstream addr: 127.0.0.1:12355
+--- error_log
+127.0.0.1:12355 marked as up
+--- no_error_log
+[alert]
+--- timeout: 6

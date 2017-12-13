@@ -51,6 +51,17 @@ http {
     init_worker_by_lua_block {
         local hc = require "resty.upstream.healthcheck"
 
+        -- this should be defined in a separate module to avoid a global function definition
+        func_node_down = function(peer)
+            ngx.log(ngx.WARN, peer.name, " is marked down")
+
+            -- do something else fancy with the peer data, like notify a remote service
+        end
+
+        func_node_up = function(peer)
+            ngx.log(ngx.WARN, peer.name, " is marked up")
+        end
+
         local ok, err = hc.spawn_checker{
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
@@ -65,6 +76,8 @@ http {
             rise = 2,  -- # of successive successes before turning a peer up
             valid_statuses = {200, 302},  -- a list valid HTTP status code
             concurrency = 10,  -- concurrency level for test requests
+            hook_down = func_node_down, -- register a function to call when a node is marked down
+            hook_up = func_hook_up, -- register a function to call when a node is marked up
         }
         if not ok then
             ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
@@ -118,6 +131,10 @@ the specified NGINX upstream group with the specified shm storage.
 
 The healthchecker does not need any client traffic to function. The checks are performed actively
 and periodically.
+
+Note that two configuration options, `hook_down` and `hook_up`, can be defined and will fire when
+a node is marked as down, or up, respectively. The associated `peer` object is passed as a function
+param in both cases. Registering these functions is optional.
 
 This method call is asynchronous and returns immediately.
 

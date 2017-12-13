@@ -139,6 +139,10 @@ local function peer_fail(ctx, is_backup, id, peer)
                 " failure(s)")
         peer.down = true
         set_peer_down_globally(ctx, is_backup, id, true)
+
+        if ctx.hook_down then
+            ctx.hook_down(peer)
+        end
     end
 end
 
@@ -192,6 +196,10 @@ local function peer_ok(ctx, is_backup, id, peer)
                 " success(es)")
         peer.down = nil
         set_peer_down_globally(ctx, is_backup, id, nil)
+
+        if ctx.hook_up then
+            ctx.hook_up(peer)
+        end
     end
 end
 
@@ -591,6 +599,16 @@ function _M.spawn_checker(opts)
         return nil, "no upstream specified"
     end
 
+    local hook_down = opts.hook_down
+    if hook_down and type(hook_down) ~= "function" then
+        return nil, "hook_down must be a function"
+    end
+
+    local hook_up = opts.hook_up
+    if hook_up and type(hook_up) ~= "function" then
+        return nil, "hook_up must be a function"
+    end
+
     local ppeers, err = get_primary_peers(u)
     if not ppeers then
         return nil, "failed to get primary peers: " .. err
@@ -614,6 +632,8 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        hook_down = hook_down,
+        hook_up = hook_up,
     }
 
     local ok, err = new_timer(0, check, ctx)
