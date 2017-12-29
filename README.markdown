@@ -54,8 +54,13 @@ http {
         local ok, err = hc.spawn_checker{
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
+            
             type = "http",
-
+            -- type = "https",
+            -- ssl_verify = true, -- verify SSL certs
+            -- ssl_server_name = "custom_server_name" -- if given, will be passed to tcpsock:sslhandshake as server_name instead of peer.name
+            -- ssl_reuse_session = true, -- this makes sure SSL session will be reused
+            
             http_req = "GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n",
                     -- raw HTTP request for checking
 
