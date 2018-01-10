@@ -16,6 +16,7 @@ local ceil = math.ceil
 local spawn = ngx.thread.spawn
 local wait = ngx.thread.wait
 local pcall = pcall
+local shared_config = require("resty.upstream.shared_config")
 
 local _M = {
     _VERSION = '0.05'
@@ -485,6 +486,11 @@ check = function (premature, ctx)
         return
     end
 
+    if ctx.shared_config and shared_config:refresh() then
+        ctx = _M.check_and_set_config(shared_config:get())
+        shared_config:mark_worker_update_finish()
+    end
+
     local ok, err = pcall(do_check, ctx)
     if not ok then
         errlog("failed to run healthcheck cycle: ", err)
@@ -518,7 +524,7 @@ local function preprocess_peers(peers)
     return peers
 end
 
-function _M.spawn_checker(opts)
+function _M.check_and_set_config( opts )
     local typ = opts.type
     if not typ then
         return nil, "\"type\" option required"
@@ -600,8 +606,7 @@ function _M.spawn_checker(opts)
     if not bpeers then
         return nil, "failed to get backup peers: " .. err
     end
-
-    local ctx = {
+    local  ctx  = {
         upstream = u,
         primary_peers = preprocess_peers(ppeers),
         backup_peers = preprocess_peers(bpeers),
@@ -614,15 +619,23 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        shared_config = opts.shared_config or false and true
     }
 
+    if ctx.shared_config then
+        shared_config:set(opts)
+    end
+
+    return ctx
+end
+
+function _M.spawn_checker(opts)
+    local ctx = _M.check_and_set_config(opts)
     local ok, err = new_timer(0, check, ctx)
     if not ok then
         return nil, "failed to create timer: " .. err
     end
-
-    update_upstream_checker_status(u, true)
-
+    update_upstream_checker_status( ctx.upstream, true)
     return true
 end
 

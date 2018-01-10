@@ -16,6 +16,7 @@ my $pwd = cwd();
 our $HttpConfig = <<_EOC_;
     lua_socket_log_errors off;
     lua_package_path "$pwd/../lua-resty-lock/?.lua;$pwd/lib/?.lua;$pwd/t/lib/?.lua;;";
+    lua_shared_dict healthcheck_config 1m;
 _EOC_
 
 #no_diff();
