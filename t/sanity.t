@@ -1070,7 +1070,7 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:7983 DOWN
+        127.0.0.1:7983 up
     Backup Peers
 
 --- no_error_log
