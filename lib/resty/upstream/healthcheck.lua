@@ -138,11 +138,11 @@ local function peer_fail(ctx, is_backup, id, peer)
     -- print("ctx fall: ", ctx.fall, ", peer down: ", peer.down,
           -- ", fails: ", fails)
 
-    local u_key = gen_upstream_key(u,"all_down")
+    local u_key = gen_upstream_key(u, "all_down")
 
     local all_down, err = dict:get(u_key)
     if not all_down then
-        errlog("Failed to get all down flag for upstream " .. u .. ". ", err)
+        errlog("failed to get all down flag for upstream " .. u .. ". ", err)
         return
     end
 
@@ -206,18 +206,18 @@ local function peer_ok(ctx, is_backup, id, peer)
         set_peer_down_globally(ctx, is_backup, id, nil)
     end
 
-    local u_key = gen_upstream_key(u,"all_down")
+    local u_key = gen_upstream_key(u, "all_down")
 
     local all_down, err = dict:get(u_key)
     if not all_down then
-        errlog("Failed to get all down flag for upstream " .. u .. ". ", err)
+        errlog("failed to get all down flag for upstream " .. u .. ". ", err)
         return
     end    
 
     if all_down == 1 then
         local ok, err = dict:set(u_key, 0)
         if not ok then
-            errlog("Failed to set all down flag for upstream " .. u .. ". ", err)
+            errlog("failed to set all down flag for upstream " .. u .. ". ", err)
         end
     end
 end
@@ -226,16 +226,16 @@ end
 local function peer_error(ctx, is_backup, id, peer, ...)
     local u = ctx.upstream
     local dict = ctx.dict
-    local u_key = gen_upstream_key(u,"all_down")
+    local u_key = gen_upstream_key(u, "all_down")
 
     local all_down, err = dict:get(u_key)
     if not all_down then
-        errlog("Failed to get all down flag for upstream " .. u .. ". ", err)
+        errlog("failed to get all down flag for upstream " .. u .. ". ", err)
         return
     end
 
     if all_down == 1 then
-        errlog("All peers of upstream " .. u .. " are reported to be down. Routing requests to all of them")
+        errlog("all peers of upstream " .. u .. " are reported to be down. Routing requests to all of them")
     end
 
     if not peer.down and all_down ~= 1 then
@@ -477,11 +477,11 @@ end
 local function set_all_down_flag(ctx, ppeers, bpeers)
     local dict = ctx.dict
     local u = ctx.upstream
-    local u_key = gen_upstream_key(u,"all_down")
+    local u_key = gen_upstream_key(u, "all_down")
 
     local all_down, err = dict:get(u_key)
     if not all_down then
-        errlog("Failed to get all down flag for upstream " .. u .. ". ", err)
+        errlog("failed to get all down flag for upstream " .. u .. ". ", err)
         return
     end
     
@@ -499,18 +499,18 @@ local function set_all_down_flag(ctx, ppeers, bpeers)
         if result then
             local ok, err = dict:set(u_key, 1)
             if not ok then
-                errlog("Failed to set all down flag for upstream " .. u .. ". ", err)
+                errlog("failed to set all down flag for upstream " .. u .. ". ", err)
             end
             
             for i = 1, #ppeers do
                 set_peer_down_globally(ctx, false, ppeers[i].id, nil)
-                --Flush local cache
+                -- flush local cache
                 ppeers[i].down = nil
             end
             
             for j = 1, #bpeers do
                 set_peer_down_globally(ctx, true, bpeers[j].id, nil)
-                --Flush local cache
+                -- flush local cache
                 bpeers[j].down = nil
             end
         end
@@ -684,10 +684,10 @@ function _M.spawn_checker(opts)
         return nil, "failed to get backup peers: " .. err
     end
     
-    local u_key = gen_upstream_key(u,"all_down")
+    local u_key = gen_upstream_key(u, "all_down")
     local ok, err = dict:set(u_key, 0)
     if not ok then
-        errlog("Failed to set all down flag for upstream " .. u .. ". ", err)
+        errlog("failed to set all down flag for upstream " .. u .. ". ", err)
     end
 
     local ctx = {
