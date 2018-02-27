@@ -479,6 +479,7 @@ local function set_all_peers_down_flag(ctx, ppeers, bpeers)
 	-- if they are all down we do:
 	-- 1. set all_peers_down to 1 for this upstream
 	-- 2. switch all peers from down to up
+	
     local dict = ctx.dict
     local u = ctx.upstream
     local u_key = gen_upstream_key(u, "all_peers_down")
@@ -494,9 +495,15 @@ local function set_all_peers_down_flag(ctx, ppeers, bpeers)
         
         for i = 1, #ppeers do 
             is_all_peers_down = is_all_peers_down and ppeers[i].down
+
+			-- if at least one peer is up we dont have to do anything
+			if not is_all_peers_down then break end
         end
 
         for j = 1, #bpeers do
+			-- if at least one peer is up we dont have to do anything
+			if not is_all_peers_down then break end
+
             is_all_peers_down = is_all_peers_down and bpeers[j].down
         end
 
