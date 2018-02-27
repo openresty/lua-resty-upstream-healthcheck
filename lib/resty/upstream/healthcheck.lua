@@ -143,7 +143,6 @@ local function peer_fail(ctx, is_backup, id, peer)
     local all_down, err = dict:get(u_key)
     if not all_down then
         errlog("failed to get all down flag for upstream " .. u .. ". ", err)
-        return
     end
 
     if not peer.down and fails >= ctx.fall and all_down ~= 1 then
@@ -687,7 +686,7 @@ function _M.spawn_checker(opts)
     local u_key = gen_upstream_key(u, "all_down")
     local ok, err = dict:set(u_key, 0)
     if not ok then
-        errlog("failed to set all down flag for upstream " .. u .. ". ", err)
+		return nil, "failed to set all down flag for upstream " .. u .. ". " .. err
     end
 
     local ctx = {
