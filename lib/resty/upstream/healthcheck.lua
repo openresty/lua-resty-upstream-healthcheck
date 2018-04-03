@@ -472,12 +472,12 @@ local function get_lock(ctx)
 end
 
 local function set_all_peers_down_flag(ctx, ppeers, bpeers)
-	-- here we check whether all_peers_down flag is not set to 1 for an upstream
-	-- if it is the case we check the status of all peers for this upstream
-	-- if they are all down we do:
-	-- 1. set all_peers_down to 1 for this upstream
-	-- 2. switch all peers from down to up
-	
+    -- here we check whether all_peers_down flag is not set to 1 for an upstream
+    -- if it is the case we check the status of all peers for this upstream
+    -- if they are all down we do:
+    -- 1. set all_peers_down to 1 for this upstream
+    -- 2. switch all peers from down to up
+    
     local dict = ctx.dict
     local u = ctx.upstream
     local u_key = gen_upstream_key(u, "all_peers_down")
@@ -494,13 +494,13 @@ local function set_all_peers_down_flag(ctx, ppeers, bpeers)
         for i = 1, #ppeers do 
             is_all_peers_down = is_all_peers_down and ppeers[i].down
 
-			-- if at least one peer is up we dont have to do anything
-			if not is_all_peers_down then break end
+            -- if at least one peer is up we dont have to do anything
+            if not is_all_peers_down then break end
         end
 
         for j = 1, #bpeers do
-			-- if at least one peer is up we dont have to do anything
-			if not is_all_peers_down then break end
+            -- if at least one peer is up we dont have to do anything
+            if not is_all_peers_down then break end
 
             is_all_peers_down = is_all_peers_down and bpeers[j].down
         end
@@ -696,7 +696,7 @@ function _M.spawn_checker(opts)
     local u_key = gen_upstream_key(u, "all_peers_down")
     local ok, err = dict:set(u_key, 0)
     if not ok then
-		return nil, "failed to set all down flag for upstream " .. u .. ". " .. err
+        return nil, "failed to set all down flag for upstream " .. u .. ". " .. err
     end
 
     local ctx = {
