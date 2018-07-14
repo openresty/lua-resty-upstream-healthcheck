@@ -313,7 +313,7 @@ local function check_peers(ctx, peers, is_backup)
 
         else
             local group_size = ceil(n / concur)
-            local nthr = ceil(n / group_size) - 1
+            nthr = ceil(n / group_size) - 1
 
             threads = new_tab(nthr, 0)
             local from = 1
