@@ -695,4 +695,37 @@ function _M.status_page()
     return concat(bits)
 end
 
+function _M.get_peer_status(upstream, peer_name)
+    local peer_status = "DOWN"
+    local us, err = get_upstreams()
+    if not us then
+        return "failed to get upstream names: " .. err
+    end
+
+    local n = #us
+    for i = 1, n do
+        local u = us[i]
+        if upstream == u then
+            local peers, err = get_primary_peers(u)
+            if not peers then
+                return "failed to get primary peers in upstream " .. u .. ": " .. err
+            end
+            local npeers = #peers
+            for j = 1, npeers do
+                local peer = peers[j]
+                if peer.name == peer_name then
+                    if peer.down then
+                        peer_status = "DOWN"
+                    else
+                        peer_status = "UP"
+                    end
+                    break
+                end
+            end
+            break
+        end
+    end
+    return peer_status
+end
+
 return _M
