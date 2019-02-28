@@ -250,6 +250,10 @@ local function check_peer(ctx, id, peer, is_backup)
         local from, to, err = re_find(status_line,
                                       [[^HTTP/\d+\.\d+\s+(\d+)]],
                                       "joi", nil, 1)
+        if err then
+            errlog("failed to parse status line: ", err)
+        end
+
         if not from then
             peer_error(ctx, is_backup, id, peer,
                        "bad status line from ", name, ": ",
