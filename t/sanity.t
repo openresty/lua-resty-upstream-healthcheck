@@ -1373,3 +1373,81 @@ healthcheck: peer \[0:0::1\]:12356 was checked to be ok
 --- wait: 0.2
 --- timeout: 6
 --- skip_eval: 8: system("ping6 -c 1 ::1 >/dev/null 2>&1") ne 0
+
+
+
+=== TEST 15: peers > concurrency
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+    server 127.0.0.1:12355;
+    server 127.0.0.1:12356;
+    server 127.0.0.1:12357;
+    server 127.0.0.1:12358;
+    server 127.0.0.1:12359 backup;
+}
+
+server {
+    listen 12354;
+
+    location /status {
+        content_by_lua_block {
+            ngx.sleep(0.2)
+        }
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+}
+--- config
+    location = /t {
+        content_by_lua_block {
+            local hc = require "resty.upstream.healthcheck"
+
+            local ok, err = hc.spawn_checker{
+                shm = "healthcheck",
+                upstream = "foo.com",
+                type = "http",
+                http_req = "GET /status HTTP/1.0\r\nHost: localhost\r\n\r\n",
+                timeout = 100,
+                fall = 1,
+                concurrency = 2,
+                no_timer = true,
+            }
+            if not ok then
+                ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+                return
+            end
+
+            ngx.print(hc.status_page())
+        }
+    }
+--- request
+GET /t
+--- response_body_like
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 DOWN
+        127.0.0.1:12355 \S+
+        127.0.0.1:12356 \S+
+        127.0.0.1:12357 \S+
+        127.0.0.1:12358 \S+
+    Backup Peers
+        127.0.0.1:12359 \S+
+--- no_error_log
+[alert]
+[emerg]
+failed to run healthcheck cycle
+--- wait: 0.3
+--- grep_error_log eval: qr/healthcheck: .*? was checked .*|healthcheck: failed to receive status line from .*?:\d+/
+--- grep_error_log_out eval
+qr/^healthcheck: peer 127\.0\.0\.1:12357 was checked to be not ok
+healthcheck: peer 127\.0\.0\.1:12358 was checked to be not ok
+healthcheck: failed to receive status line from 127\.0\.0\.1:12354
+healthcheck: peer 127\.0\.0\.1:12354 was checked to be not ok
+healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
+healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
+healthcheck: peer 127\.0\.0\.1:12359 was checked to be not ok
+$/

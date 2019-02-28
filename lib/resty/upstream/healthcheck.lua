@@ -313,7 +313,7 @@ local function check_peers(ctx, peers, is_backup)
 
         else
             local group_size = ceil(n / concur)
-            local nthr = ceil(n / group_size) - 1
+            nthr = ceil(n / group_size) - 1
 
             threads = new_tab(nthr, 0)
             local from = 1
@@ -616,9 +616,14 @@ function _M.spawn_checker(opts)
         concurrency = concur,
     }
 
-    local ok, err = new_timer(0, check, ctx)
-    if not ok then
-        return nil, "failed to create timer: " .. err
+    if debug_mode and opts.no_timer then
+        check(nil, ctx)
+
+    else
+        local ok, err = new_timer(0, check, ctx)
+        if not ok then
+            return nil, "failed to create timer: " .. err
+        end
     end
 
     update_upstream_checker_status(u, true)
