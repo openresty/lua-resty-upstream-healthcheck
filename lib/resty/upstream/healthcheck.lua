@@ -204,7 +204,7 @@ local function peer_error(ctx, is_backup, id, peer, ...)
 end
 
 local function check_peer(ctx, id, peer, is_backup)
-    local ok, err
+    local ok
     local name = peer.name
     local statuses = ctx.statuses
     local req = ctx.http_req
