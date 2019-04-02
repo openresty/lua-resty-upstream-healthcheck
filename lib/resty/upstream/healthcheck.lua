@@ -236,7 +236,7 @@ local function check_peer(ctx, id, peer, is_backup)
                           "failed to send request to ", name, ": ", err)
     end
 
-    local status_line, err = sock:receive()
+    local status_line, err = sock:receive("*a")
     if not status_line then
         peer_error(ctx, is_backup, id, peer,
                    "failed to receive status line from ", name, ": ", err)
@@ -532,6 +532,11 @@ function _M.spawn_checker(opts)
         return nil, "only \"http\" type is supported right now"
     end
 
+    local expected_string = opts.expected_string
+    if not expected_string then
+        expected_string = ".*"
+    end
+
     local http_req = opts.http_req
     if not http_req then
         return nil, "\"http_req\" option required"
@@ -618,6 +623,7 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        expected_string = expected_string
     }
 
     if debug_mode and opts.no_timer then
