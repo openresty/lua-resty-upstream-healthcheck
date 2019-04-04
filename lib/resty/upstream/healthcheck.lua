@@ -262,8 +262,7 @@ local function check_peer(ctx, id, peer, is_backup)
 
         local status = tonumber(sub(status_line, from, to))
         if not statuses[status] then
-            peer_error(ctx, is_backup, id, peer, "bad status code from ",
-                       name, ": ", status)
+            peer_error(ctx, is_backup, id, peer, "bad status code from ", name, ": ", status)
             sock:close()
             return
         end
@@ -271,7 +270,7 @@ local function check_peer(ctx, id, peer, is_backup)
 
     -- Expected string check area
     if expected_string then
-        local from, to, err = re_find(status_line, [[(]] .. expected_string .. [[])]], "joi", nil, 1)
+        local from, to, err = re_find(status_line, "(".. expected_string ..")", "joi", nil, 1)
         if err then
             errlog("failed to parse expected string line: ", err)
         end
@@ -283,7 +282,11 @@ local function check_peer(ctx, id, peer, is_backup)
         end
 
         local status = sub(status_line, from, to)
-        errlog("Expected string: ", status)
+        if not status then
+            peer_error(ctx, is_backup, id, peer, "bad expected string from ", name, ": ", status)
+            sock:close()
+            return
+        end
     end
 
     peer_ok(ctx, is_backup, id, peer)
