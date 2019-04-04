@@ -552,7 +552,7 @@ function _M.spawn_checker(opts)
 
     local expected_string = opts.expected_string
     if not expected_string then
-        expected_string = ".*"
+        expected_string = nil
     end
 
     local http_req = opts.http_req
