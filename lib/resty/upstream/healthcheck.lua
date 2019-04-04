@@ -208,6 +208,7 @@ local function check_peer(ctx, id, peer, is_backup)
     local name = peer.name
     local statuses = ctx.statuses
     local req = ctx.http_req
+    local expected_string = ctx.expected_string
 
     local sock, err = stream_sock()
     if not sock then
@@ -246,18 +247,15 @@ local function check_peer(ctx, id, peer, is_backup)
         return
     end
 
+    -- Status code checking area
     if statuses then
-        local from, to, err = re_find(status_line,
-                                      [[^HTTP/\d+\.\d+\s+(\d+)]],
-                                      "joi", nil, 1)
+        local from, to, err = re_find(status_line, [[^HTTP/\d+\.\d+\s+(\d+)]], "joi", nil, 1)
         if err then
             errlog("failed to parse status line: ", err)
         end
 
         if not from then
-            peer_error(ctx, is_backup, id, peer,
-                       "bad status line from ", name, ": ",
-                       status_line)
+            peer_error(ctx, is_backup, id, peer, "bad status line from ", name, ": ", status_line)
             sock:close()
             return
         end
@@ -269,6 +267,23 @@ local function check_peer(ctx, id, peer, is_backup)
             sock:close()
             return
         end
+    end
+
+    -- Expected string check area
+    if expected_string then
+        local from, to, err = re_find(status_line, [[(]] .. expected_string .. [[])]], "joi", nil, 1)
+        if err then
+            errlog("failed to parse expected string line: ", err)
+        end
+
+        if not from then
+            peer_error(ctx, is_backup, id, peer, "bad expected string line from ", name, ": ", status_line)
+            sock:close()
+            return
+        end
+
+        local status = sub(status_line, from, to)
+        errlog("Expected string: ", status)
     end
 
     peer_ok(ctx, is_backup, id, peer)
