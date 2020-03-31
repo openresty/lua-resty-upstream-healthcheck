@@ -16,6 +16,7 @@ local ceil = math.ceil
 local spawn = ngx.thread.spawn
 local wait = ngx.thread.wait
 local pcall = pcall
+local cjson = require("cjson.safe")
 
 local _M = {
     _VERSION = '0.05'
@@ -65,6 +66,10 @@ local function gen_peer_key(prefix, u, is_backup, id)
         return prefix .. u .. ":b" .. id
     end
     return prefix .. u .. ":p" .. id
+end
+
+local function gen_config_key(u)
+    return "c:" .. u
 end
 
 local function set_peer_down_globally(ctx, is_backup, id, value)
@@ -483,10 +488,40 @@ local function update_upstream_checker_status(upstream, success)
     upstream_checker_statuses[upstream] = cnt
 end
 
-local check
-check = function (premature, ctx)
+local function get_opts_from_dict(dict, upstream)
+    local key = gen_config_key(upstream)
+    local opts_json, err = dict:get(key)
+    local opts
+    if not opts_json then
+        if err then
+            errlog("failed to get opts from dict: ", err)
+        end
+    else
+        opts, err = cjson.decode(opts_json)
+        if not opts then
+            if err then
+                errlog("failed to decode opts json: ", err)
+            end
+        end
+    end
+    return opts
+end
+
+local function check(premature, ctx)
     if premature then
         return
+    end
+
+    if ctx.mutable then
+        local opts = get_opts_from_dict(ctx.dict, ctx.upstream)
+        local updated_ctx, err = get_context(opts)
+        if not updated_ctx then
+            if err then
+                errlog("failed to get context from opts: ", err)
+            end
+        else
+            ctx = updated_ctx
+        end
     end
 
     local ok, err = pcall(do_check, ctx)
@@ -522,7 +557,29 @@ local function preprocess_peers(peers)
     return peers
 end
 
-function _M.spawn_checker(opts)
+local function cal_interval(internal)
+    if interval then
+        interval = interval / 1000
+        if interval < 0.002 then  -- minimum 2ms
+            interval = 0.002
+        end
+    end
+    return interval
+end
+
+local function get_vali_status_map(valid_statuses)
+    local statuses
+    if valid_statuses then
+        statuses = new_tab(0, #valid_statuses)
+        for _, status in ipairs(valid_statuses) do
+            -- print("found good status ", status)
+            statuses[status] = true
+        end
+    end
+    return statuses
+end
+
+local function get_context(opts)
     local typ = opts.type
     if not typ then
         return nil, "\"type\" option required"
@@ -547,23 +604,10 @@ function _M.spawn_checker(opts)
         interval = 1
 
     else
-        interval = interval / 1000
-        if interval < 0.002 then  -- minimum 2ms
-            interval = 0.002
-        end
+        interval = cal_interval(interval)
     end
 
-    local valid_statuses = opts.valid_statuses
-    local statuses
-    if valid_statuses then
-        statuses = new_tab(0, #valid_statuses)
-        for _, status in ipairs(valid_statuses) do
-            -- print("found good status ", status)
-            statuses[status] = true
-        end
-    end
-
-    -- debug("interval: ", interval)
+    local statuses = get_vali_status_map(opts.valid_statuses)
 
     local concur = opts.concurrency
     if not concur then
@@ -604,7 +648,6 @@ function _M.spawn_checker(opts)
     if not bpeers then
         return nil, "failed to get backup peers: " .. err
     end
-
     local ctx = {
         upstream = u,
         primary_peers = preprocess_peers(ppeers),
@@ -618,11 +661,29 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        -- whether the checker config can be modified in stages after init_worker
+        mutable = opts.mutable,
     }
+    return ctx
+end
+
+function _M.spawn_checker(opts)
+    local ctx, err = get_context(opts)
+
+    if not ctx then
+        return ctx, err
+    end
+
+    if ctx.mut then
+        local key = gen_config_key(ctx.upstream)
+        local ok, err = ctx.dict:set(key, cjson.encode(opts))
+        if not ok then
+            return nil, "failed to save checker config: " .. err
+        end
+    end
 
     if debug_mode and opts.no_timer then
         check(nil, ctx)
-
     else
         local ok, err = new_timer(0, check, ctx)
         if not ok then
@@ -632,6 +693,51 @@ function _M.spawn_checker(opts)
 
     update_upstream_checker_status(u, true)
 
+    return true
+end
+
+local _M.update_upstream_checker(opts)
+    local u = opts.upstream
+    if not u then
+        return nil, "no upstream specified"
+    end
+
+    local shm = opts.shm
+    if not shm then
+        return nil, "\"shm\" option required"
+    end
+
+    local dict = shared[shm]
+    if not dict then
+        return nil, "shm \"" .. tostring(shm) .. "\" not found"
+    end
+
+    local current_ops = get_opts_from_dict(opts.upstream, dict)
+
+    if not current_ops then
+        return nil, "fail to get current opts from dict"
+    end
+
+    local interval = opts.interval
+    if interval then
+        interval = cal_interval(interval)
+    end
+
+    local statuses = get_vali_status_map(opts.valid_statuses)
+
+    current_ops.http_req = opts.http_req or current_ops.http_req,
+    current_ops.timeout = opts.timeout or current_ops.timeout,
+    current_ops.interval = interval or current_ops.interval,
+    current_ops.statuses = statuses or current_ops.statuses,
+    current_ops.concurrency = opts.concurrency or current_ops.concurrency,
+    current_ops.fall = opts.fall or current_ops.fall,
+    current_ops.rise = opts.rise or current_ops.rise,
+
+    local key = gen_config_key(current_ops.upstream)
+    local ok, err = ctx.dict:set(key, cjson.encode(current_ops))
+    if not ok then
+        return nil, "failed to save checker config: " .. err
+    end
     return true
 end
 
