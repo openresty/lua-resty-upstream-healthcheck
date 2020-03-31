@@ -1523,5 +1523,5 @@ Upstream foo.com
 failed to run healthcheck cycle
 --- error_log
 healthcheck: bad status code from 127.0.0.1:12354
---- timeout: 6
 $/
+--- timeout: 6
