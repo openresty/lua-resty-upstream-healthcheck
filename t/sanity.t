@@ -1482,6 +1482,7 @@ init_worker_by_lua_block {
         interval = 50,  -- ms
         fall = 1,
         valid_statuses = {200},
+        mutable = true,
     }
     if not ok then
         ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
