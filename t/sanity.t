@@ -1450,4 +1450,77 @@ healthcheck: peer 127\.0\.0\.1:12354 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12359 was checked to be not ok
+
+=== TEST 16: update healthcheck config
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+}
+
+server {
+    listen 12354;
+    location = /good_status {
+        return 200;
+    }
+    location = /bad_status {
+        return 500;
+    }
+}
+
+
+lua_shared_dict healthcheck 2m;
+init_worker_by_lua_block {
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "http",
+        http_req = "GET /good_status HTTP/1.0\r\nHost: localhost\r\n\r\n",
+        interval = 50,  -- ms
+        fall = 1,
+        valid_statuses = {200},
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+}
+
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            local hc = require "resty.upstream.healthcheck"
+            ngx.sleep(0.52)
+            ngx.print(hc.status_page())
+            hc.update_upstream_checker({
+                upstream="foo.com",
+                shm = "healthcheck",
+                http_req = "GET /bad_status HTTP/1.0\r\nHost: localhost\r\n\r\n",
+            })
+            ngx.sleep(0.52)
+            ngx.print(hc.status_page())
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 DOWN
+
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+--- no_error_log
+[alert]
+failed to run healthcheck cycle
+--- error_log
+healthcheck: bad status code from 127.0.0.1:12354
+--- timeout: 6
 $/
