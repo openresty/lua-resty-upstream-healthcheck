@@ -473,6 +473,23 @@ local function do_check(ctx)
     end
 end
 
+local function preprocess_peers(peers)
+    local n = #peers
+    for i = 1, n do
+        local p = peers[i]
+        local name = p.name
+
+        if name then
+            local from, to, err = re_find(name, [[^(.*):\d+$]], "jo", nil, 1)
+            if from then
+                p.host = sub(name, 1, to)
+                p.port = tonumber(sub(name, to + 2))
+            end
+        end
+    end
+    return peers
+end
+
 local function update_upstream_checker_status(upstream, success)
     local cnt = upstream_checker_statuses[upstream]
     if not cnt then
@@ -507,57 +524,7 @@ local function get_opts_from_dict(dict, upstream)
     return opts
 end
 
-local function check(premature, ctx)
-    if premature then
-        return
-    end
-
-    if ctx.mutable then
-        local opts = get_opts_from_dict(ctx.dict, ctx.upstream)
-        local updated_ctx, err = get_context(opts)
-        if not updated_ctx then
-            if err then
-                errlog("failed to get context from opts: ", err)
-            end
-        else
-            ctx = updated_ctx
-        end
-    end
-
-    local ok, err = pcall(do_check, ctx)
-    if not ok then
-        errlog("failed to run healthcheck cycle: ", err)
-    end
-
-    local ok, err = new_timer(ctx.interval, check, ctx)
-    if not ok then
-        if err ~= "process exiting" then
-            errlog("failed to create timer: ", err)
-        end
-
-        update_upstream_checker_status(ctx.upstream, false)
-        return
-    end
-end
-
-local function preprocess_peers(peers)
-    local n = #peers
-    for i = 1, n do
-        local p = peers[i]
-        local name = p.name
-
-        if name then
-            local from, to, err = re_find(name, [[^(.*):\d+$]], "jo", nil, 1)
-            if from then
-                p.host = sub(name, 1, to)
-                p.port = tonumber(sub(name, to + 2))
-            end
-        end
-    end
-    return peers
-end
-
-local function cal_interval(internal)
+local function cal_interval(interval)
     if interval then
         interval = interval / 1000
         if interval < 0.002 then  -- minimum 2ms
@@ -667,6 +634,41 @@ local function get_context(opts)
     return ctx
 end
 
+local function check(premature, ctx)
+    if premature then
+        return
+    end
+
+    if ctx.mutable then
+        local opts = get_opts_from_dict(ctx.dict, ctx.upstream)
+        if opts then
+            local updated_ctx, err = get_context(opts)
+            if not updated_ctx then
+                if err then
+                    errlog("failed to get context from opts: ", err)
+                end
+            else
+                ctx = updated_ctx
+            end
+        end
+    end
+
+    local ok, err = pcall(do_check, ctx)
+    if not ok then
+        errlog("failed to run healthcheck cycle: ", err)
+    end
+
+    local ok, err = new_timer(ctx.interval, check, ctx)
+    if not ok then
+        if err ~= "process exiting" then
+            errlog("failed to create timer: ", err)
+        end
+
+        update_upstream_checker_status(ctx.upstream, false)
+        return
+    end
+end
+
 function _M.spawn_checker(opts)
     local ctx, err = get_context(opts)
 
@@ -674,7 +676,7 @@ function _M.spawn_checker(opts)
         return ctx, err
     end
 
-    if ctx.mut then
+    if ctx.mutable then
         local key = gen_config_key(ctx.upstream)
         local ok, err = ctx.dict:set(key, cjson.encode(opts))
         if not ok then
@@ -691,12 +693,12 @@ function _M.spawn_checker(opts)
         end
     end
 
-    update_upstream_checker_status(u, true)
+    update_upstream_checker_status(ctx.upstream, true)
 
     return true
 end
 
-local _M.update_upstream_checker(opts)
+function _M.update_upstream_checker(opts)
     local u = opts.upstream
     if not u then
         return nil, "no upstream specified"
@@ -712,7 +714,7 @@ local _M.update_upstream_checker(opts)
         return nil, "shm \"" .. tostring(shm) .. "\" not found"
     end
 
-    local current_ops = get_opts_from_dict(opts.upstream, dict)
+    local current_ops = get_opts_from_dict(dict, opts.upstream)
 
     if not current_ops then
         return nil, "fail to get current opts from dict"
@@ -725,16 +727,16 @@ local _M.update_upstream_checker(opts)
 
     local statuses = get_vali_status_map(opts.valid_statuses)
 
-    current_ops.http_req = opts.http_req or current_ops.http_req,
-    current_ops.timeout = opts.timeout or current_ops.timeout,
-    current_ops.interval = interval or current_ops.interval,
-    current_ops.statuses = statuses or current_ops.statuses,
-    current_ops.concurrency = opts.concurrency or current_ops.concurrency,
-    current_ops.fall = opts.fall or current_ops.fall,
-    current_ops.rise = opts.rise or current_ops.rise,
+    current_ops.http_req = opts.http_req or current_ops.http_req
+    current_ops.timeout = opts.timeout or current_ops.timeout
+    current_ops.interval = interval or current_ops.interval
+    current_ops.statuses = statuses or current_ops.statuses
+    current_ops.concurrency = opts.concurrency or current_ops.concurrency
+    current_ops.fall = opts.fall or current_ops.fall
+    current_ops.rise = opts.rise or current_ops.rise
 
     local key = gen_config_key(current_ops.upstream)
-    local ok, err = ctx.dict:set(key, cjson.encode(current_ops))
+    local ok, err = dict:set(key, cjson.encode(current_ops))
     if not ok then
         return nil, "failed to save checker config: " .. err
     end
