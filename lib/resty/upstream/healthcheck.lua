@@ -611,7 +611,7 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
-        no_timer = opts.no_timer
+        no_timer = opts.no_timer,
     }
 
     if opts.no_timer then
