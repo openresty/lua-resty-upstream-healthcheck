@@ -16,7 +16,6 @@ local ceil = math.ceil
 local spawn = ngx.thread.spawn
 local wait = ngx.thread.wait
 local pcall = pcall
-local cjson = require("cjson.safe")
 
 local _M = {
     _VERSION = '0.05'
@@ -68,8 +67,8 @@ local function gen_peer_key(prefix, u, is_backup, id)
     return prefix .. u .. ":p" .. id
 end
 
-local function gen_config_key(u)
-    return "c:" .. u
+local function gen_config_key(u, opt)
+    return "c:" .. u .. ":" .. opt
 end
 
 local function set_peer_down_globally(ctx, is_backup, id, value)
@@ -505,21 +504,75 @@ local function update_upstream_checker_status(upstream, success)
     upstream_checker_statuses[upstream] = cnt
 end
 
-local function get_opts_from_dict(dict, upstream)
-    local key = gen_config_key(upstream)
-    local opts_json, err = dict:get(key)
-    local opts
-    if not opts_json then
-        if err then
-            errlog("failed to get opts from dict: ", err)
-        end
-    else
-        opts, err = cjson.decode(opts_json)
-        if not opts then
-            if err then
-                errlog("failed to decode opts json: ", err)
+local mutable_opt_keys = {"http_req","timeout","interval","valid_statuses", "concurrency", "fall", "rise"}
+local immutable_opt_keys = {"type","shm","upstream", "mutable"}
+
+local function save_opts_to_dict(dict, opts, init)
+    local key, value, ok, err
+    for _, opt_key in ipairs(mutable_opt_keys) do
+        key = gen_config_key(opts.upstream, opt_key)
+        value = opts[opt_key]
+        if value or init then
+            if opt_key == "valid_statuses" and value then
+                value = table.concat(value, ",")
+            end
+            ok, err = dict:set(key, value)
+            if not ok then
+                return nil, "failed to save checker config 12: " .. err .. opt_key
             end
         end
+    end
+
+    for _, opt_key in ipairs(immutable_opt_keys) do
+        key = gen_config_key(opts.upstream, opt_key)
+        value = opts[opt_key]
+        if value and init then
+            ok, err = dict:set(key, value)
+            if not ok then
+                return nil, "failed to save checker config: " .. err
+            end
+        end
+    end
+    return true
+end
+
+local function get_opts_from_dict(dict, upstream)
+    local key, value, ok, err
+    local opts = {}
+    for _, opt_key in ipairs(mutable_opt_keys) do
+        key = gen_config_key(upstream, opt_key)
+        value, err = dict:get(key)
+        if err then
+            return nil, "valid_statuses value in dict is invalid: " .. err
+        end
+        if value then
+            if opt_key == "valid_statuses" then
+                local statuses = {}
+                while(true)
+                do
+                    local from, to, err = re_find(value, "([0-9]+)", "jo")
+                    if err then
+                        return nil, "valid_statuses value in dict is invalid: " .. err
+                    end
+                    if from then
+                        statuses[#statuses+1] = tonumber(sub(value, from, to))
+                        value = sub(value, to + 1)
+                    else
+                        break
+                    end
+                end
+                value = statuses
+            end
+        end
+        opts[opt_key] = value
+    end
+    for _, opt_key in ipairs(immutable_opt_keys) do
+        key = gen_config_key(upstream, opt_key)
+        value, err = dict:get(key)
+        if err then
+            return nil, "valid_statuses value in dict is invalid: " .. err
+        end
+        opts[opt_key] = value
     end
     return opts
 end
@@ -677,8 +730,7 @@ function _M.spawn_checker(opts)
     end
 
     if ctx.mutable then
-        local key = gen_config_key(ctx.upstream)
-        local ok, err = ctx.dict:set(key, cjson.encode(opts))
+        local ok, err = save_opts_to_dict(ctx.dict, opts, true)
         if not ok then
             return nil, "failed to save checker config: " .. err
         end
@@ -713,30 +765,8 @@ function _M.update_upstream_checker(opts)
     if not dict then
         return nil, "shm \"" .. tostring(shm) .. "\" not found"
     end
-
-    local current_ops = get_opts_from_dict(dict, opts.upstream)
-
-    if not current_ops then
-        return nil, "fail to get current opts from dict"
-    end
-
-    local interval = opts.interval
-    if interval then
-        interval = cal_interval(interval)
-    end
-
-    local statuses = get_vali_status_map(opts.valid_statuses)
-
-    current_ops.http_req = opts.http_req or current_ops.http_req
-    current_ops.timeout = opts.timeout or current_ops.timeout
-    current_ops.interval = interval or current_ops.interval
-    current_ops.statuses = statuses or current_ops.statuses
-    current_ops.concurrency = opts.concurrency or current_ops.concurrency
-    current_ops.fall = opts.fall or current_ops.fall
-    current_ops.rise = opts.rise or current_ops.rise
-
-    local key = gen_config_key(current_ops.upstream)
-    local ok, err = dict:set(key, cjson.encode(current_ops))
+    opts.mutable = true
+    local ok, err = save_opts_to_dict(dict, opts)
     if not ok then
         return nil, "failed to save checker config: " .. err
     end
