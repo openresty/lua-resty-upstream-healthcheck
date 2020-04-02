@@ -1451,3 +1451,85 @@ healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12359 was checked to be not ok
 $/
+
+
+=== TEST 16: effect of no_timer
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+}
+
+server {
+    listen 12354;
+
+    location /status_slow {
+        content_by_lua_block {
+            ngx.sleep(0.2)
+        }
+    }
+    location /status_fast {
+        content_by_lua_block {
+            ngx.sleep(0.01)
+        }
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+}
+--- config
+    location = /t {
+        content_by_lua_block {
+            local hc = require "resty.upstream.healthcheck"
+
+            local ok, err = hc.spawn_checker{
+                shm = "healthcheck",
+                upstream = "foo.com",
+                type = "http",
+                http_req = "GET /status_slow HTTP/1.0\r\nHost: localhost\r\n\r\n",
+                timeout = 100,
+                fall = 1,
+                concurrency = 2,
+                no_timer = true,
+            }
+            if not ok then
+                ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+                return
+            end
+
+            ngx.print(hc.status_page())
+
+            local ok, err = hc.spawn_checker{
+                shm = "healthcheck",
+                upstream = "foo.com",
+                type = "http",
+                http_req = "GET /status_fast HTTP/1.0\r\nHost: localhost\r\n\r\n",
+                timeout = 100,
+                fall = 1,
+                concurrency = 2,
+                no_timer = true,
+            }
+            if not ok then
+                ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+                return
+            end
+
+            ngx.print(hc.status_page())
+        }
+    }
+--- request
+GET /t
+--- response_body_like
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 DOWN
+    Backup Peers
+
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 up
+    Backup Peers
+
+--- no_error_log
+$/
