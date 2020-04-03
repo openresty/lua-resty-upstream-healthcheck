@@ -1532,4 +1532,3 @@ Upstream foo.com
     Backup Peers
 
 --- no_error_log
-$/
