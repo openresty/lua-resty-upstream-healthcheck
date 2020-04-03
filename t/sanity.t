@@ -1532,3 +1532,4 @@ Upstream foo.com
 
 --- no_error_log
 $/
+--- timeout: 5
