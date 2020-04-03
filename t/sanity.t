@@ -1464,14 +1464,9 @@ upstream foo.com {
 server {
     listen 12354;
 
-    location /status_slow {
+    location = /status {
         content_by_lua_block {
-            ngx.sleep(0.2)
-        }
-    }
-    location /status_fast {
-        content_by_lua_block {
-            ngx.sleep(0.01)
+            ngx.say("ok")
         }
     }
 }
@@ -1482,40 +1477,45 @@ lua_shared_dict healthcheck 1m;
     location = /t {
         content_by_lua_block {
             local hc = require "resty.upstream.healthcheck"
-
-            local ok, err = hc.spawn_checker{
-                shm = "healthcheck",
-                upstream = "foo.com",
-                type = "http",
-                http_req = "GET /status_slow HTTP/1.0\r\nHost: localhost\r\n\r\n",
-                timeout = 100,
-                fall = 1,
-                concurrency = 2,
-                no_timer = true,
-            }
-            if not ok then
-                ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
-                return
+            for i = 1,2,1 do
+               local ok, err = hc.spawn_checker{
+                   shm = "healthcheck",
+                   upstream = "foo.com",
+                   type = "http",
+                   http_req = "GET /status_not_exist HTTP/1.0\r\nHost: localhost\r\n\r\n",
+                   timeout = 100,
+                   fall = 1,
+                   concurrency = 1,
+                   valid_statuses = {200},
+                   no_timer = true,
+               }
+               if not ok then
+                   ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+                   return
+               end
+                ngx.sleep(0.5)
             end
+            ngx.say(hc.status_page())
 
-            ngx.print(hc.status_page())
-
-            local ok, err = hc.spawn_checker{
-                shm = "healthcheck",
-                upstream = "foo.com",
-                type = "http",
-                http_req = "GET /status_fast HTTP/1.0\r\nHost: localhost\r\n\r\n",
-                timeout = 100,
-                fall = 1,
-                concurrency = 2,
-                no_timer = true,
-            }
-            if not ok then
-                ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
-                return
+            for i = 1,3,1 do
+                local ok, err = hc.spawn_checker{
+                    shm = "healthcheck",
+                    upstream = "foo.com",
+                    type = "http",
+                    http_req = "GET /status HTTP/1.0\r\nHost: localhost\r\n\r\n",
+                    timeout = 100,
+                    fall = 1,
+                    concurrency = 1,
+                    valid_statuses = {200},
+                    no_timer = true,
+                }
+                if not ok then
+                    ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+                    return
+                end
+                ngx.sleep(0.5)
             end
-
-            ngx.print(hc.status_page())
+            ngx.say(hc.status_page()) 
         }
     }
 --- request
