@@ -1530,6 +1530,4 @@ Upstream foo.com
         127.0.0.1:12354 up
     Backup Peers
 
---- no_error_log
-$/
 --- timeout: 5
