@@ -54,6 +54,7 @@ local function errlog(...)
 end
 
 local function debug(...)
+    -- print("debug mode: ", debug_mode)
     if debug_mode then
         log(DEBUG, "healthcheck: ", ...)
     end
@@ -129,6 +130,9 @@ local function peer_fail(ctx, is_backup, id, peer)
             end
         end
     end
+
+    -- print("ctx fall: ", ctx.fall, ", peer down: ", peer.down,
+          -- ", fails: ", fails)
 
     if not peer.down and fails >= ctx.fall then
         warn("peer ", peer.name, " is turned down after ", fails,
@@ -214,6 +218,7 @@ local function check_peer(ctx, id, peer, is_backup)
     sock:settimeout(ctx.timeout)
 
     if peer.host then
+        -- print("peer port: ", peer.port)
         ok, err = sock:connect(peer.host, peer.port)
     else
         ok, err = sock:connect(name)
@@ -478,7 +483,8 @@ local function update_upstream_checker_status(upstream, success)
     upstream_checker_statuses[upstream] = cnt
 end
 
-local function check(premature, ctx)
+local check
+check = function (premature, ctx)
     if premature then
         return
     end
@@ -554,9 +560,12 @@ function _M.spawn_checker(opts)
     if valid_statuses then
         statuses = new_tab(0, #valid_statuses)
         for _, status in ipairs(valid_statuses) do
+            -- print("found good status ", status)
             statuses[status] = true
         end
     end
+
+    -- debug("interval: ", interval)
 
     local concur = opts.concurrency
     if not concur then
@@ -616,6 +625,7 @@ function _M.spawn_checker(opts)
 
     if opts.no_timer then
         check(nil, ctx)
+
     else
         local ok, err = new_timer(0, check, ctx)
         if not ok then
