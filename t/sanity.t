@@ -9,7 +9,7 @@ use Cwd qw(cwd);
 
 #repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6 + 9);
+plan tests => repeat_each() * (blocks() * 6 + 5);
 
 my $pwd = cwd();
 
@@ -1524,6 +1524,7 @@ Upstream foo.com
     Primary Peers
         127.0.0.1:12354 DOWN
     Backup Peers
+
 Upstream foo.com
     Primary Peers
         127.0.0.1:12354 up
