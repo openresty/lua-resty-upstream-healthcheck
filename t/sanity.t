@@ -1524,10 +1524,8 @@ Upstream foo.com
     Primary Peers
         127.0.0.1:12354 DOWN
     Backup Peers
-
 Upstream foo.com
     Primary Peers
         127.0.0.1:12354 up
     Backup Peers
-
 --- timeout: 5
