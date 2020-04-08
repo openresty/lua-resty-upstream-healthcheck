@@ -9,7 +9,7 @@ use Cwd qw(cwd);
 
 #repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6 + 9);
+plan tests => repeat_each() * (blocks() * 6 + 5);
 
 my $pwd = cwd();
 
@@ -1454,7 +1454,7 @@ $/
 
 
 
-=== TEST 16: effect of no_timer
+=== TEST 16: effect of no_timer (healthcheck options can be changed)
 --- http_config eval
 "$::HttpConfig"
 . q{
@@ -1531,5 +1531,4 @@ Upstream foo.com
     Primary Peers
         127.0.0.1:12354 up
     Backup Peers
-
 --- timeout: 5
