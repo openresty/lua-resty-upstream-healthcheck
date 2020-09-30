@@ -36,7 +36,7 @@ env:
     - LD_LIBRARY_PATH=$LUAJIT_LIB:$LD_LIBRARY_PATH
     - TEST_NGINX_SLEEP=0.006
   matrix:
-    - NGINX_VERSION=1.17.8
+    - NGINX_VERSION=1.19.2
 
 install:
   - if [ ! -d download-cache ]; then mkdir download-cache; fi
@@ -50,7 +50,7 @@ install:
   - git clone https://github.com/openresty/lua-resty-lrucache.git ../lua-resty-lrucache
   - git clone https://github.com/openresty/lua-upstream-nginx-module.git ../lua-upstream-nginx-module
   - git clone https://github.com/openresty/echo-nginx-module.git ../echo-nginx-module
-  - git clone https://github.com/openresty/no-pool-nginx.git ../no-pool-nginx
+  - git clone -b 1.19.2.x https://github.com/xiaocang/no-pool-nginx.git ../no-pool-nginx
   - git clone -b v2.1-agentzh https://github.com/openresty/luajit2.git
   - git clone https://github.com/openresty/mockeagain.git
 
