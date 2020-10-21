@@ -657,9 +657,9 @@ local function gen_peers_prometheus_status_info(peers, bits, idx, u, role)
         idx = idx + 1
         local peer = peers[i]
         if peer.down then
-            bits[idx] = string.format("nginx_upstream_status{name=\"%s\",endpoint=\"%s\", status=\"DOWN\", role=\"%s\"} %d \n", u, peer.name, role,os.time())
+            bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"%s\", status=\"DOWN\", role=\"%s\"} 1\n", u, peer.name, role)
         else
-            bits[idx] = string.format("nginx_upstream_status{name=\"%s\",endpoint=\"%s\", status=\"UP\", role=\"%s\"} %d \n", u, peer.name, role,os.time())
+            bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"%s\", status=\"UP\", role=\"%s\"} 1\n", u, peer.name, role)
         end
     end
     return idx
@@ -667,15 +667,17 @@ end
 
 function _M.prometheus_status_page()
     -- generate an prometheus metrics
+    -- # HELP nginx_upstream_status The running staus of nginx upstream
+    -- # TYPE nginx_upstream_status counter
+    -- nginx_upstream_status{name="",endpoint="",status=""}
+
     local us, err = get_upstreams()
     if not us then
         return "failed to get upstream names: " .. err
     end
 
     local n = #us
-    -- # HELP nginx_upstream_status The running staus of nginx upstream
-    -- # TYPE nginx_upstream_status counter
-    -- nginx_upstream_status{name="",endpoint="",status=""}
+
     local us, err = get_upstreams()
     if not us then
         return "failed to get upstream names: " .. err
@@ -686,40 +688,38 @@ function _M.prometheus_status_page()
     local bits = new_tab(n * 20, 0)
     local idx = 1
 
-    bits[idx]="# HELP nginx_upstream_status The running staus of nginx upstream \n"
+    bits[idx] = "# HELP nginx_upstream_status_info The running staus of nginx upstream \n"
     idx = idx+1
-    bits[idx]="# TYPE nginx_upstream_status counter\n"
+    bits[idx] = "# TYPE nginx_upstream_status_info gauge\n"
 
     for i = 1, n do
         local u = us[i]
         local ncheckers = upstream_checker_statuses[u]
         if not ncheckers or ncheckers == 0 then
             idx = idx+1
-            bits[idx] = string.format("nginx_upstream_status{name=\"%s\",endpoint=\"\",status=\"UNKNOW\", role=\"\"} %d \n", u,os.time())
+            bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"\",status=\"UNKNOW\", role=\"\"} 1\n", u)
             goto continue
         end
 
         local peers, err = get_primary_peers(u)
         if not peers then
             idx = idx+1
-            bits[idx] = string.format("nginx_upstream_status{name=\"%s\",endpoint=\"\",status=\"DOWN\", role=\"\"} %d \n", u,os.time())
+            bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"\",status=\"DOWN\", role=\"\"} 1\n", u)
         else
             local peers, err = get_primary_peers(u)
             if peers then
-                -- idx = idx+1
                 idx = gen_peers_prometheus_status_info(peers, bits, idx, u,"PRIMARY")
             end
 
             peers, err = get_backup_peers(u)
             if peers then
-                -- idx = idx+1
                 idx = gen_peers_prometheus_status_info(peers, bits, idx, u,"BACKUP")
             end
         end
         ::continue::
     end
-    -- idx = idx+1
-    bits[idx+1]="\n"
+
+    bits[idx+1] = "\n"
     return concat(bits)
 end
 
