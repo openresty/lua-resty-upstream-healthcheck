@@ -668,8 +668,8 @@ end
 function _M.prometheus_status_page()
     -- generate an prometheus metrics
     -- # HELP nginx_upstream_status The running staus of nginx upstream
-    -- # TYPE nginx_upstream_status counter
-    -- nginx_upstream_status{name="",endpoint="",status=""}
+    -- # TYPE nginx_upstream_status gauge
+    -- nginx_upstream_status{name="",endpoint="",status="", role=""} num
 
     local us, err = get_upstreams()
     if not us then

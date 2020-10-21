@@ -93,6 +93,17 @@ http {
                 ngx.print(hc.status_page())
             }
         }
+
+        # status page for all the peers (prometheus format):
+        location = /metrics {
+            access_log off;
+
+            default_type text/plain;
+            content_by_lua_block {
+                local hc = require "resty.upstream.healthcheck"
+                ngx.print(hc.prometheus_status_page())
+            }
+        }
     }
 }
 ```
