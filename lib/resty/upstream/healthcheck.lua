@@ -673,14 +673,7 @@ function _M.prometheus_status_page()
 
     local us, err = get_upstreams()
     if not us then
-        return "failed to get upstream names: " .. err
-    end
-
-    local n = #us
-
-    local us, err = get_upstreams()
-    if not us then
-        return "failed to get upstream names: " .. err
+        return nil, "failed to get upstream names: " .. err
     end
 
     local n = #us
