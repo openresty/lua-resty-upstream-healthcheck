@@ -101,7 +101,13 @@ http {
             default_type text/plain;
             content_by_lua_block {
                 local hc = require "resty.upstream.healthcheck"
-                ngx.print(hc.prometheus_status_page())
+                st , err = hc.prometheus_status_page()
+                if not st then
+                    ngx.say(err)
+                    return
+                end
+
+                ngx.print(st)
             }
         }
     }
