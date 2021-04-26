@@ -1351,7 +1351,7 @@ Upstream foo.com
         127.0.0.1:12354 up
         [::1]:12355 up
     Backup Peers
-        [0:0::1]:12356 up
+        [::1]:12356 up
 upstream addr: 127.0.0.1:12354
 upstream addr: [::1]:12355
 
@@ -1365,10 +1365,10 @@ failed to run healthcheck cycle
 --- grep_error_log_out eval
 qr/^healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer \[::1\]:12355 was checked to be ok
-healthcheck: peer \[0:0::1\]:12356 was checked to be ok
+healthcheck: peer \[::1\]:12356 was checked to be ok
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer \[::1\]:12355 was checked to be ok
-healthcheck: peer \[0:0::1\]:12356 was checked to be ok
+healthcheck: peer \[::1\]:12356 was checked to be ok
 ){3,7}$/
 --- wait: 0.2
 --- timeout: 6
