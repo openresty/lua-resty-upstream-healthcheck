@@ -54,7 +54,7 @@ http {
         local ok, err = hc.spawn_checker{
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
-            type = "http",
+            type = "http", -- support "http" and "https"
 
             http_req = "GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n",
                     -- raw HTTP request for checking
@@ -65,6 +65,8 @@ http {
             rise = 2,  -- # of successive successes before turning a peer up
             valid_statuses = {200, 302},  -- a list valid HTTP status code
             concurrency = 10,  -- concurrency level for test requests
+            -- ssl_verify = true, -- https type only, verify ssl certificate or not, default true
+            -- host = foo.com, -- https type only, host name in ssl handshake, default nil
         }
         if not ok then
             ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
