@@ -1610,7 +1610,7 @@ init_worker_by_lua '
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
         shm = "healthcheck",
-        upstream = "no_found",
+        upstream = "not_found",
         type = "http",
         http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
         interval = 100,  -- 100ms
