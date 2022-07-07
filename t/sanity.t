@@ -1451,3 +1451,196 @@ healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12359 was checked to be not ok
 $/
+
+=== TEST 16: prometheus format status page (everything is healthy)
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+    server 127.0.0.1:12355;
+    server 127.0.0.1:12356 backup;
+}
+
+server {
+    listen 12354;
+    location = /status {
+        return 200;
+    }
+}
+
+server {
+    listen 12355;
+    location = /status {
+        return 200;
+    }
+}
+
+server {
+    listen 12356;
+    location = /status {
+        return 200;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "http",
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 2,
+	valid_statuses = {200}
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+            local hc = require "resty.upstream.healthcheck"
+            st , err = hc.prometheus_status_page()
+            if not st then
+                ngx.say(err)
+                return
+            end
+            ngx.say(st)
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+# HELP nginx_upstream_status_info The running staus of nginx upstream
+# TYPE nginx_upstream_status_info gauge
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12354",status="UP",role="PRIMARY"} 1
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12355",status="UP",role="PRIMARY"} 1
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12356",status="UP",role="BACKUP"} 1
+
+=== TEST 17: prometheus format status page (everything is down)
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+    server 127.0.0.1:12355;
+    server 127.0.0.1:12356 backup;
+}
+
+server {
+    listen 12354;
+    location = /status {
+        return 500;
+    }
+}
+
+server {
+    listen 12355;
+    location = /status {
+        return 500;
+    }
+}
+
+server {
+    listen 12356;
+    location = /status {
+        return 500;
+    }
+}
+
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "http",
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 2,
+	valid_statuses = {200}
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+            local hc = require "resty.upstream.healthcheck"
+            st , err = hc.prometheus_status_page()
+            if not st then
+                ngx.say(err)
+                return
+            end
+            ngx.say(st)
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+# HELP nginx_upstream_status_info The running staus of nginx upstream
+# TYPE nginx_upstream_status_info gauge
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12354",status="DOWN",role="PRIMARY"} 1
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12355",status="DOWN",role="PRIMARY"} 1
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12356",status="DOWN",role="BACKUP"} 1
+
+=== TEST 18: prometheus format status page (no peers)
+--- http_config eval
+"$::HttpConfig"
+. q{
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "no_found",
+        type = "http",
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 2,
+	valid_statuses = {200}
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.52)
+            local hc = require "resty.upstream.healthcheck"
+            st , err = hc.prometheus_status_page()
+            if not st then
+                ngx.say(err)
+                return
+            end
+            ngx.say(st)
+        ';
+    }
+--- request
+GET /t
+
+--- response_body
+# HELP nginx_upstream_status_info The running staus of nginx upstream
+# TYPE nginx_upstream_status_info gauge
+nginx_upstream_status_info{name="not_found",endpoint="",status="UNKNOWN",role=""} 1
