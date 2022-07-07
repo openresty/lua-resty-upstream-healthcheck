@@ -1643,4 +1643,3 @@ GET /t
 --- response_body
 # HELP nginx_upstream_status_info The running staus of nginx upstream
 # TYPE nginx_upstream_status_info gauge
-nginx_upstream_status_info{name="not_found",endpoint="",status="UNKNOWN",role=""} 1
