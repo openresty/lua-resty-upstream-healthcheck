@@ -682,22 +682,22 @@ function _M.prometheus_status_page()
     local bits = new_tab(n * 20, 0)
     local idx = 1
 
-    bits[idx] = "# HELP nginx_upstream_status_info The running staus of nginx upstream"
-    idx = idx+1
+    bits[idx] = "# HELP nginx_upstream_status_info The running status of nginx upstream"
+    idx = idx + 1
     bits[idx] = "# TYPE nginx_upstream_status_info gauge"
 
     for i = 1, n do
         local u = us[i]
         local ncheckers = upstream_checker_statuses[u]
         if not ncheckers or ncheckers == 0 then
-            idx = idx+1
+            idx = idx + 1
             bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"\",status=\"UNKNOW\",role=\"\"} 1", u)
             goto continue
         end
 
         local peers, err = get_primary_peers(u)
         if not peers then
-            idx = idx+1
+            idx = idx + 1
             bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"\",status=\"DOWN\",role=\"\"} 1", u)
         else
             local peers, err = get_primary_peers(u)
