@@ -1520,7 +1520,7 @@ init_worker_by_lua '
 GET /t
 
 --- response_body
-# HELP nginx_upstream_status_info The running staus of nginx upstream
+# HELP nginx_upstream_status_info The running status of nginx upstream
 # TYPE nginx_upstream_status_info gauge
 nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12354",status="UP",role="PRIMARY"} 1
 nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12355",status="UP",role="PRIMARY"} 1
@@ -1594,7 +1594,7 @@ init_worker_by_lua '
 GET /t
 
 --- response_body
-# HELP nginx_upstream_status_info The running staus of nginx upstream
+# HELP nginx_upstream_status_info The running status of nginx upstream
 # TYPE nginx_upstream_status_info gauge
 nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12354",status="DOWN",role="PRIMARY"} 1
 nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12355",status="DOWN",role="PRIMARY"} 1
@@ -1641,5 +1641,5 @@ init_worker_by_lua '
 GET /t
 
 --- response_body
-# HELP nginx_upstream_status_info The running staus of nginx upstream
+# HELP nginx_upstream_status_info The running status of nginx upstream
 # TYPE nginx_upstream_status_info gauge
