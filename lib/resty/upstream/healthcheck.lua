@@ -657,11 +657,7 @@ local function gen_peers_prometheus_status_info(peers, bits, idx, u, role)
     for i = 1, npeers do
         idx = idx + 1
         local peer = peers[i]
-        if peer.down then
-            bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"%s\",status=\"DOWN\",role=\"%s\"} 1", u, peer.name, role)
-        else
-            bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"%s\",status=\"UP\",role=\"%s\"} 1", u, peer.name, role)
-        end
+        bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"%s\",status=\"%s\",role=\"%s\"} 1", u, peer.name, peer.down and "DOWN" or "UP", role)   
     end
     return idx
 end
