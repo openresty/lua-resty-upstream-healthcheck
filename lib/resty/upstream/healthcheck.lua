@@ -208,6 +208,7 @@ local function check_peer(ctx, id, peer, is_backup)
     local name = peer.name
     local statuses = ctx.statuses
     local req = ctx.http_req
+    local expected_string = ctx.expected_string
 
     local sock, err = stream_sock()
     if not sock then
@@ -236,7 +237,7 @@ local function check_peer(ctx, id, peer, is_backup)
                           "failed to send request to ", name, ": ", err)
     end
 
-    local status_line, err = sock:receive()
+    local status_line, err = sock:receive("*a")
     if not status_line then
         peer_error(ctx, is_backup, id, peer,
                    "failed to receive status line from ", name, ": ", err)
@@ -246,26 +247,43 @@ local function check_peer(ctx, id, peer, is_backup)
         return
     end
 
+    -- Status code checking area
     if statuses then
-        local from, to, err = re_find(status_line,
-                                      [[^HTTP/\d+\.\d+\s+(\d+)]],
-                                      "joi", nil, 1)
+        local from, to, err = re_find(status_line, [[^HTTP/\d+\.\d+\s+(\d+)]], "joi", nil, 1)
         if err then
             errlog("failed to parse status line: ", err)
         end
 
         if not from then
-            peer_error(ctx, is_backup, id, peer,
-                       "bad status line from ", name, ": ",
-                       status_line)
+            peer_error(ctx, is_backup, id, peer, "bad status line from ", name, ": ", status_line)
             sock:close()
             return
         end
 
         local status = tonumber(sub(status_line, from, to))
         if not statuses[status] then
-            peer_error(ctx, is_backup, id, peer, "bad status code from ",
-                       name, ": ", status)
+            peer_error(ctx, is_backup, id, peer, "bad status code from ", name, ": ", status)
+            sock:close()
+            return
+        end
+    end
+
+    -- Expected string check area
+    if expected_string then
+        local from, to, err = re_find(status_line, "(".. expected_string ..")", "joi", nil, 1)
+        if err then
+            errlog("failed to parse expected string line: ", err)
+        end
+
+        if not from then
+            peer_error(ctx, is_backup, id, peer, "bad expected string line from ", name, ": ", status_line)
+            sock:close()
+            return
+        end
+
+        local status = sub(status_line, from, to)
+        if not status then
+            peer_error(ctx, is_backup, id, peer, "bad expected string from ", name, ": ", status)
             sock:close()
             return
         end
@@ -532,6 +550,11 @@ function _M.spawn_checker(opts)
         return nil, "only \"http\" type is supported right now"
     end
 
+    local expected_string = opts.expected_string
+    if not expected_string then
+        expected_string = nil
+    end
+
     local http_req = opts.http_req
     if not http_req then
         return nil, "\"http_req\" option required"
@@ -618,6 +641,7 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        expected_string = expected_string
     }
 
     if debug_mode and opts.no_timer then
