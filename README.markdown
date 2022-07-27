@@ -70,8 +70,20 @@ http {
             ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
             return
         end
+        
+        -- Example of HealthCheck for Tcp
+        local ok, err = hc.spawn_checker{
+            shm = "healthcheck",  -- defined by "lua_shared_dict"
+            upstream = "foo.com", -- defined by "upstream"
+            type = "tcp",
+            interval = 2000,  -- run the check cycle every 2 sec
+            timeout = 1000,   -- 1 sec is the timeout for network operations
+            fall = 3,  -- # of successive failures before turning a peer down
+            rise = 2,  -- # of successive successes before turning a peer up
+            concurrency = 10,  -- concurrency level for test requests
+        }
 
-        -- Just call hc.spawn_checker() for more times here if you have
+        -- Just call hc.spawn_checker() for more times here if you have
         -- more upstream groups to monitor. One call for one upstream group.
         -- They can all share the same shm zone without conflicts but they
         -- need a bigger shm zone for obvious reasons.
