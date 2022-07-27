@@ -651,6 +651,66 @@ local function gen_peers_status_info(peers, bits, idx)
     return idx
 end
 
+
+local function gen_peers_prometheus_status_info(peers, bits, idx, u, role)
+    local npeers = #peers
+    for i = 1, npeers do
+        idx = idx + 1
+        local peer = peers[i]
+        bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"%s\",status=\"%s\",role=\"%s\"} 1", u, peer.name, peer.down and "DOWN" or "UP", role)
+    end
+    return idx
+end
+
+function _M.prometheus_status_page()
+    -- generate an prometheus metrics
+    -- # HELP nginx_upstream_status_info The running staus of nginx upstream
+    -- # TYPE nginx_upstream_status_info gauge
+    -- nginx_upstream_status_info{name="",endpoint="",status="",role=""} num
+
+    local us, err = get_upstreams()
+    if not us then
+        return nil, "failed to get upstream names: " .. err
+    end
+
+    local n = #us
+
+    local bits = new_tab(n * 20, 0)
+    local idx = 1
+
+    bits[idx] = "# HELP nginx_upstream_status_info The running status of nginx upstream"
+    idx = idx + 1
+    bits[idx] = "# TYPE nginx_upstream_status_info gauge"
+
+    for i = 1, n do
+        local u = us[i]
+        local ncheckers = upstream_checker_statuses[u]
+        if not ncheckers or ncheckers == 0 then
+            idx = idx + 1
+            bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"\",status=\"UNKNOW\",role=\"\"} 1", u)
+            goto continue
+        end
+
+        local peers, err = get_primary_peers(u)
+        if not peers then
+            idx = idx + 1
+            bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"\",status=\"DOWN\",role=\"\"} 1", u)
+        else
+            local peers, err = get_primary_peers(u)
+            if peers then
+                idx = gen_peers_prometheus_status_info(peers, bits, idx, u,"PRIMARY")
+            end
+
+            peers, err = get_backup_peers(u)
+            if peers then
+                idx = gen_peers_prometheus_status_info(peers, bits, idx, u,"BACKUP")
+            end
+        end
+        ::continue::
+    end
+    return concat(bits, "\n")
+end
+
 function _M.status_page()
     -- generate an HTML page
     local us, err = get_upstreams()
