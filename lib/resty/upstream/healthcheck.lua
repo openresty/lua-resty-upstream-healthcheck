@@ -230,6 +230,15 @@ local function check_peer(ctx, id, peer, is_backup)
         return peer_fail(ctx, is_backup, id, peer)
     end
 
+    if ctx.type == "https" then
+        ok, err = sock:sslhandshake(nil, ctx.host, ctx.ssl_verify)
+        if not ok then
+            sock:close()
+            return peer_error(ctx, is_backup, id, peer,
+                              "failed to ssl handshake to ", name, ": ", err)
+        end
+    end
+
     local bytes, err = sock:send(req)
     if not bytes then
         return peer_error(ctx, is_backup, id, peer,
@@ -528,8 +537,13 @@ function _M.spawn_checker(opts)
         return nil, "\"type\" option required"
     end
 
-    if typ ~= "http" then
-        return nil, "only \"http\" type is supported right now"
+    if typ ~= "http" and typ ~= "https" then
+        return nil, "only \"http\" and \"https\" type are supported right now"
+    end
+
+    local ssl_verify = opts.ssl_verify
+    if ssl_verify == nil then
+        ssl_verify = true
     end
 
     local http_req = opts.http_req
@@ -618,6 +632,9 @@ function _M.spawn_checker(opts)
         statuses = statuses,
         version = 0,
         concurrency = concur,
+        type = typ,
+        host = host,
+        ssl_verify = ssl_verify
     }
 
     if debug_mode and opts.no_timer then
