@@ -12,7 +12,10 @@ local new_timer = ngx.timer.at
 local shared = ngx.shared
 local debug_mode = ngx.config.debug
 local concat = table.concat
-local unpack = table.unpack
+local unpack = unpack
+if _VERSION == 'Lua 5.2' then
+    unpack = table.unpack
+end
 local tonumber = tonumber
 local tostring = tostring
 local ipairs = ipairs
