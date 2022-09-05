@@ -3,12 +3,16 @@ local log = ngx.log
 local ERR = ngx.ERR
 local WARN = ngx.WARN
 local DEBUG = ngx.DEBUG
+local ngx = ngx
+local error = error
+local string = string
 local sub = string.sub
 local re_find = ngx.re.find
 local new_timer = ngx.timer.at
 local shared = ngx.shared
 local debug_mode = ngx.config.debug
 local concat = table.concat
+local unpack = table.unpack
 local tonumber = tonumber
 local tostring = tostring
 local ipairs = ipairs
@@ -16,15 +20,13 @@ local ceil = math.ceil
 local spawn = ngx.thread.spawn
 local wait = ngx.thread.wait
 local pcall = pcall
+local setmetatable = setmetatable
 
 local _M = {
     _VERSION = '0.05'
 }
 
-if not ngx.config
-   or not ngx.config.ngx_lua_version
-   or ngx.config.ngx_lua_version < 9005
-then
+if not ngx.config or not ngx.config.ngx_lua_version or ngx.config.ngx_lua_version < 9005 then
     error("ngx_lua 0.9.5+ required")
 end
 
@@ -35,7 +37,9 @@ end
 
 local ok, new_tab = pcall(require, "table.new")
 if not ok or type(new_tab) ~= "function" then
-    new_tab = function (narr, nrec) return {} end
+    new_tab = function(narr, nrec)
+        return {}
+    end
 end
 
 local set_peer_down = upstream.set_peer_down
@@ -132,11 +136,10 @@ local function peer_fail(ctx, is_backup, id, peer)
     end
 
     -- print("ctx fall: ", ctx.fall, ", peer down: ", peer.down,
-          -- ", fails: ", fails)
+    -- ", fails: ", fails)
 
     if not peer.down and fails >= ctx.fall then
-        warn("peer ", peer.name, " is turned down after ", fails,
-                " failure(s)")
+        warn("peer ", peer.name, " is turned down after ", fails, " failure(s)")
         peer.down = true
         set_peer_down_globally(ctx, is_backup, id, true)
     end
@@ -188,8 +191,7 @@ local function peer_ok(ctx, is_backup, id, peer)
     end
 
     if peer.down and succ >= ctx.rise then
-        warn("peer ", peer.name, " is turned up after ", succ,
-                " success(es)")
+        warn("peer ", peer.name, " is turned up after ", succ, " success(es)")
         peer.down = nil
         set_peer_down_globally(ctx, is_backup, id, nil)
     end
@@ -234,47 +236,39 @@ local function check_peer(ctx, id, peer, is_backup)
         ok, err = sock:sslhandshake(nil, ctx.host, ctx.ssl_verify)
         if not ok then
             sock:close()
-            return peer_error(ctx, is_backup, id, peer,
-                              "failed to ssl handshake to ", name, ": ", err)
+            return peer_error(ctx, is_backup, id, peer, "failed to ssl handshake to ", name, ": ", err)
         end
     end
 
     local bytes, err = sock:send(req)
     if not bytes then
-        return peer_error(ctx, is_backup, id, peer,
-                          "failed to send request to ", name, ": ", err)
+        return peer_error(ctx, is_backup, id, peer, "failed to send request to ", name, ": ", err)
     end
 
     local status_line, err = sock:receive()
     if not status_line then
-        peer_error(ctx, is_backup, id, peer,
-                   "failed to receive status line from ", name, ": ", err)
+        peer_error(ctx, is_backup, id, peer, "failed to receive status line from ", name, ": ", err)
         if err == "timeout" then
-            sock:close()  -- timeout errors do not close the socket.
+            sock:close() -- timeout errors do not close the socket.
         end
         return
     end
 
     if statuses then
-        local from, to, err = re_find(status_line,
-                                      [[^HTTP/\d+\.\d+\s+(\d+)]],
-                                      "joi", nil, 1)
+        local from, to, err = re_find(status_line, [[^HTTP/\d+\.\d+\s+(\d+)]], "joi", nil, 1)
         if err then
             errlog("failed to parse status line: ", err)
         end
 
         if not from then
-            peer_error(ctx, is_backup, id, peer,
-                       "bad status line from ", name, ": ",
-                       status_line)
+            peer_error(ctx, is_backup, id, peer, "bad status line from ", name, ": ", status_line)
             sock:close()
             return
         end
 
         local status = tonumber(sub(status_line, from, to))
         if not statuses[status] then
-            peer_error(ctx, is_backup, id, peer, "bad status code from ",
-                       name, ": ", status)
+            peer_error(ctx, is_backup, id, peer, "bad status code from ", name, ": ", status)
             sock:close()
             return
         end
@@ -311,16 +305,14 @@ local function check_peers(ctx, peers, is_backup)
             for i = 1, nthr do
 
                 if debug_mode then
-                    debug("spawn a thread checking ",
-                          is_backup and "backup" or "primary", " peer ", i - 1)
+                    debug("spawn a thread checking ", is_backup and "backup" or "primary", " peer ", i - 1)
                 end
 
                 threads[i] = spawn(check_peer, ctx, i - 1, peers[i], is_backup)
             end
             -- use the current "light thread" to run the last task
             if debug_mode then
-                debug("check ", is_backup and "backup" or "primary", " peer ",
-                      n - 1)
+                debug("check ", is_backup and "backup" or "primary", " peer ", n - 1)
             end
             check_peer(ctx, n - 1, peers[n], is_backup)
 
@@ -342,13 +334,11 @@ local function check_peers(ctx, peers, is_backup)
                 end
 
                 if debug_mode then
-                    debug("spawn a thread checking ",
-                          is_backup and "backup" or "primary", " peers ",
-                          from - 1, " to ", to - 1)
+                    debug("spawn a thread checking ", is_backup and "backup" or "primary", " peers ", from - 1, " to ",
+                        to - 1)
                 end
 
-                threads[i] = spawn(check_peer_range, ctx, from, to, peers,
-                                   is_backup)
+                threads[i] = spawn(check_peer_range, ctx, from, to, peers, is_backup)
                 from = from + group_size
                 if rest == 0 then
                     break
@@ -358,8 +348,7 @@ local function check_peers(ctx, peers, is_backup)
                 local to = from + rest - 1
 
                 if debug_mode then
-                    debug("check ", is_backup and "backup" or "primary",
-                          " peers ", from - 1, " to ", to - 1)
+                    debug("check ", is_backup and "backup" or "primary", " peers ", from - 1, " to ", to - 1)
                 end
 
                 check_peer_range(ctx, from, to, peers, is_backup)
@@ -493,7 +482,7 @@ local function update_upstream_checker_status(upstream, success)
 end
 
 local check
-check = function (premature, ctx)
+check = function(premature, ctx)
     if premature then
         return
     end
@@ -562,7 +551,7 @@ function _M.spawn_checker(opts)
 
     else
         interval = interval / 1000
-        if interval < 0.002 then  -- minimum 2ms
+        if interval < 0.002 then -- minimum 2ms
             interval = 0.002
         end
     end
@@ -661,22 +650,98 @@ local function gen_peers_status_info(peers, bits, idx)
         if peer.down then
             bits[idx + 2] = " DOWN\n"
         else
-            bits[idx + 2] = " up\n"
+            bits[idx + 2] = " UP\n"
         end
         idx = idx + 3
     end
     return idx
 end
 
+local function new_status_table(n)
+    local new_status_meta = {
+        __add = function(self, rhs)
+            -- debug("new_status_meta:__add: rhs: ", rhs)
+            self.statuses[self.idx] = rhs
+            self.idx = self.idx + 1
+        end
+    }
+    new_status_meta.__index = new_status_meta
 
-local function gen_peers_prometheus_status_info(peers, bits, idx, u, role)
+    function new_status_meta:add(rhs)
+        self:__add(rhs)
+    end
+
+    local tab = {
+        statuses = new_tab(n * 20, 0),
+        idx = 1
+    }
+    return setmetatable(tab, new_status_meta)
+end
+
+-- upstream status generator function
+
+local function gen_upstream_prometheus_status(u, s, n)
+    return string.format("nginx_upstream_status_info{name=\"%s\",status=\"%s\"} %d", u, s, n)
+end
+
+-- combined upstream status adding functions
+
+local function add_upstream_up_prometheus_status(tab, u)
+    tab:add(gen_upstream_prometheus_status(u, "UP", 1))
+    tab:add(gen_upstream_prometheus_status(u, "DOWN", 0))
+    tab:add(gen_upstream_prometheus_status(u, "UNKNOWN", 0))
+end
+
+local function add_upstream_down_prometheus_status(tab, u)
+    tab:add(gen_upstream_prometheus_status(u, "UP", 0))
+    tab:add(gen_upstream_prometheus_status(u, "DOWN", 1))
+    tab:add(gen_upstream_prometheus_status(u, "UNKNOWN", 0))
+end
+
+local function add_upstream_unknown_prometheus_status(tab, u)
+    tab:add(gen_upstream_prometheus_status(u, "UP", 0))
+    tab:add(gen_upstream_prometheus_status(u, "DOWN", 0))
+    tab:add(gen_upstream_prometheus_status(u, "UNKNOWN", 1))
+end
+
+-- peer status generator functions
+
+local function gen_peer_prometheus_status(u, p, r, s, n)
+    return string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"%s\",status=\"%s\",role=\"%s\"} %d", u, p,
+        s, r, n)
+end
+
+-- combined peer status adding function
+
+local function add_peer_status(tab, u, p, r)
+    tab:add(gen_peer_prometheus_status(u, p.name, r, "UP", not p.down and 1 or 0))
+    tab:add(gen_peer_prometheus_status(u, p.name, r, "DOWN", p.down and 1 or 0))
+end
+
+local function add_peer_prometheus_status(tab, u, p, r)
+    tab:add(gen_peer_prometheus_status(u, p.name, r, "UP", not p.down and 1 or 0))
+    tab:add(gen_peer_prometheus_status(u, p.name, r, "DOWN", p.down and 1 or 0))
+end
+
+local function add_peers_info(tab, u, peers, role)
     local npeers = #peers
     for i = 1, npeers do
-        idx = idx + 1
         local peer = peers[i]
-        bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"%s\",status=\"%s\",role=\"%s\"} 1", u, peer.name, peer.down and "DOWN" or "UP", role)
+        tab:add("        ")
+        tab:add(peer.name)
+        if peer.down then
+            tab:add(" DOWN\n")
+        else
+            tab:add(" UP\n")
+        end
     end
-    return idx
+end
+
+local function add_peers_prometheus_info(tab, u, peers, role)
+    local npeers = #peers
+    for i = 1, npeers do
+        add_peer_prometheus_status(tab, u, peers[i], role)
+    end
 end
 
 function _M.prometheus_status_page()
@@ -692,40 +757,38 @@ function _M.prometheus_status_page()
 
     local n = #us
 
-    local bits = new_tab(n * 20, 0)
-    local idx = 1
-
-    bits[idx] = "# HELP nginx_upstream_status_info The running status of nginx upstream"
-    idx = idx + 1
-    bits[idx] = "# TYPE nginx_upstream_status_info gauge"
+    local stats_tab = new_status_table(n)
 
     for i = 1, n do
         local u = us[i]
         local ncheckers = upstream_checker_statuses[u]
         if not ncheckers or ncheckers == 0 then
-            idx = idx + 1
-            bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"\",status=\"UNKNOW\",role=\"\"} 1", u)
+            add_upstream_unknown_prometheus_status(stats_tab, u)
             goto continue
         end
 
         local peers, err = get_primary_peers(u)
         if not peers then
-            idx = idx + 1
-            bits[idx] = string.format("nginx_upstream_status_info{name=\"%s\",endpoint=\"\",status=\"DOWN\",role=\"\"} 1", u)
+            add_upstream_down_prometheus_status(stats_tab, u)
         else
+            add_upstream_up_prometheus_status(stats_tab, u)
             local peers, err = get_primary_peers(u)
             if peers then
-                idx = gen_peers_prometheus_status_info(peers, bits, idx, u,"PRIMARY")
+                add_peers_prometheus_info(stats_tab, u, peers, "PRIMARY")
             end
 
             peers, err = get_backup_peers(u)
             if peers then
-                idx = gen_peers_prometheus_status_info(peers, bits, idx, u,"BACKUP")
+                add_peers_prometheus_info(stats_tab, u, peers, "BACKUP")
             end
         end
         ::continue::
     end
-    return concat(bits, "\n")
+
+    local status_lines = {"# HELP nginx_upstream_status_info The running status of nginx upstream",
+                          "# TYPE nginx_upstream_status_info gauge", unpack(stats_tab.statuses)}
+
+    return concat(status_lines, "\n")
 end
 
 function _M.status_page()
@@ -736,49 +799,42 @@ function _M.status_page()
     end
 
     local n = #us
-    local bits = new_tab(n * 20, 0)
-    local idx = 1
+    local stats_tab = new_status_table(n)
+
     for i = 1, n do
         if i > 1 then
-            bits[idx] = "\n"
-            idx = idx + 1
+            stats_tab:add("\n")
         end
 
         local u = us[i]
 
-        bits[idx] = "Upstream "
-        bits[idx + 1] = u
-        idx = idx + 2
+        stats_tab:add("Upstream ")
+        stats_tab:add(u)
 
         local ncheckers = upstream_checker_statuses[u]
         if not ncheckers or ncheckers == 0 then
-            bits[idx] = " (NO checkers)"
-            idx = idx + 1
+            stats_tab:add(" (NO checkers)")
         end
 
-        bits[idx] = "\n    Primary Peers\n"
-        idx = idx + 1
+        stats_tab:add("\n    Primary Peers\n")
 
         local peers, err = get_primary_peers(u)
         if not peers then
-            return "failed to get primary peers in upstream " .. u .. ": "
-                   .. err
+            return "failed to get primary peers in upstream " .. u .. ": " .. err
         end
 
-        idx = gen_peers_status_info(peers, bits, idx)
+        add_peers_info(stats_tab, u, peers, "PRIMARY")
 
-        bits[idx] = "    Backup Peers\n"
-        idx = idx + 1
+        stats_tab:add("    Backup Peers\n")
 
         peers, err = get_backup_peers(u)
         if not peers then
-            return "failed to get backup peers in upstream " .. u .. ": "
-                   .. err
+            return "failed to get backup peers in upstream " .. u .. ": " .. err
         end
 
-        idx = gen_peers_status_info(peers, bits, idx)
+        add_peers_info(stats_tab, u, peers, "BACKUP")
     end
-    return concat(bits)
+    return concat(stats_tab.statuses)
 end
 
 return _M

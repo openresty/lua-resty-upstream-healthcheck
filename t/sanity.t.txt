@@ -57,7 +57,6 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
-    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -154,7 +153,6 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
-    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -255,7 +253,6 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
-    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -362,7 +359,6 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
-    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -470,7 +466,6 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
-    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -588,7 +583,6 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
-    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -706,7 +700,6 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
-    ngx.config.debug = 1
     local dict = ngx.shared.healthcheck
     dict:flush_all()
     assert(dict:set("v:foo.com", 1))
@@ -812,7 +805,6 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
-    ngx.config.debug = 1
     local dict = ngx.shared.healthcheck
     dict:flush_all()
     assert(dict:set("v:foo.com", 1))
@@ -907,7 +899,6 @@ upstream foo.com {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
-    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -970,7 +961,6 @@ upstream foo.com {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
-    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -1036,7 +1026,6 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
-    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -1131,7 +1120,6 @@ server {
 
 lua_shared_dict healthcheck 2m;
 init_worker_by_lua_block {
-    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     for i, upstream in ipairs{'foo.com', 'bar.com'} do
@@ -1316,7 +1304,6 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua_block {
-    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -1417,7 +1404,6 @@ lua_shared_dict healthcheck 1m;
 --- config
     location = /t {
         content_by_lua_block {
-            ngx.config.debug = 1
             local hc = require "resty.upstream.healthcheck"
 
             local ok, err = hc.spawn_checker{
