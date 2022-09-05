@@ -74,5 +74,4 @@ script:
   - ngx-build $NGINX_VERSION --with-ipv6 --with-http_realip_module --with-http_ssl_module --with-cc-opt="-I$OPENSSL_INC" --with-ld-opt="-L$OPENSSL_LIB -Wl,-rpath,$OPENSSL_LIB" --add-module=../ndk-nginx-module --add-module=../lua-nginx-module --add-module=../lua-upstream-nginx-module --add-module=../echo-nginx-module --with-debug > build.log 2>&1 || (cat build.log && exit 1)
   - nginx -V
   - ldd `which nginx`|grep -E 'luajit|ssl|pcre'
-  - prove -r t/prometheus_empty.t
-  - cat t/servroot/logs/error.log
+  - find t -maxdepth 1 -name "*.t" -type f | xargs -I{} /bin/bash -c "prove {} || cat t/servroot/logs/error.log; sleep 0.5"
