@@ -25,7 +25,9 @@ local wait = ngx.thread.wait
 local pcall = pcall
 local setmetatable = setmetatable
 
-local _M = {_VERSION = '0.05'}
+local _M = {
+    _VERSION = '0.05'
+}
 
 if not ngx.config or not ngx.config.ngx_lua_version
     or ngx.config.ngx_lua_version < 9005 then
