@@ -1,0 +1,6 @@
+column_limit: 75
+keep_simple_function_one_line: false
+keep_simple_control_block_one_line: false
+align_table_field: false
+break_after_operator: false
+break_after_functioncall_lp: false
