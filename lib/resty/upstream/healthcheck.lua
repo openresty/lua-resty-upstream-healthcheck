@@ -729,9 +729,10 @@ end
 -- peer status generator functions
 
 local function gen_peer_prometheus_status(u, p, r, s, n)
-    return string.format(
+    local r = string.format(
                "nginx_upstream_status_info{name=\"%s\",endpoint=\"%s\",status=\"%s\",role=\"%s\"} %d",
                u, p, s, r, n)
+     return r
 end
 
 -- combined peer status adding function
