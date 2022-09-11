@@ -701,9 +701,10 @@ end
 -- upstream status generator function
 
 local function gen_upstream_prometheus_status(u, s, n)
-    return string.format(
+    local r = string.format(
                "nginx_upstream_status_info{name=\"%s\",status=\"%s\"} %d",
                u, s, n)
+    return r
 end
 
 -- combined upstream status adding functions
