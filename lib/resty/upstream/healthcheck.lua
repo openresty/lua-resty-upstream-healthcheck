@@ -633,7 +633,7 @@ function _M.spawn_checker(opts)
         version = 0,
         concurrency = concur,
         type = typ,
-        host = host,
+        host = opts.host,
         ssl_verify = ssl_verify
     }
 
