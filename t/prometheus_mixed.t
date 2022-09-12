@@ -117,9 +117,6 @@ GET /t
 nginx_upstream_status_info{name="unknown.com",status="UP"} 0
 nginx_upstream_status_info{name="unknown.com",status="DOWN"} 0
 nginx_upstream_status_info{name="unknown.com",status="UNKNOWN"} 1
-nginx_upstream_status_info{name="foo.com",status="UP"} 1
-nginx_upstream_status_info{name="foo.com",status="DOWN"} 0
-nginx_upstream_status_info{name="foo.com",status="UNKNOWN"} 0
 nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12354",status="UP",role="PRIMARY"} 0
 nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12354",status="DOWN",role="PRIMARY"} 1
 nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12355",status="UP",role="PRIMARY"} 1
@@ -128,3 +125,6 @@ nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12357",status="UP"
 nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12357",status="DOWN",role="PRIMARY"} 0
 nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12356",status="UP",role="BACKUP"} 0
 nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12356",status="DOWN",role="BACKUP"} 1
+nginx_upstream_status_info{name="foo.com",status="UP"} 1
+nginx_upstream_status_info{name="foo.com",status="DOWN"} 0
+nginx_upstream_status_info{name="foo.com",status="UNKNOWN"} 0
