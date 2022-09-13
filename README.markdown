@@ -6,23 +6,24 @@ lua-resty-upstream-healthcheck - Health-checker for Nginx upstream servers
 Table of Contents
 =================
 
-* [Name](#name)
-* [Status](#status)
-* [Synopsis](#synopsis)
-* [Description](#description)
-* [Methods](#methods)
-    * [spawn_checker](#spawn_checker)
-    * [status_page](#status_page)
-* [Multiple Upstreams](#multiple-upstreams)
-* [Installation](#installation)
-* [TODO](#todo)
-* [Community](#community)
-    * [English Mailing List](#english-mailing-list)
-    * [Chinese Mailing List](#chinese-mailing-list)
-* [Bugs and Patches](#bugs-and-patches)
-* [Author](#author)
-* [Copyright and License](#copyright-and-license)
-* [See Also](#see-also)
+- [Name](#name)
+- [Table of Contents](#table-of-contents)
+- [Status](#status)
+- [Synopsis](#synopsis)
+- [Description](#description)
+- [Methods](#methods)
+  - [spawn_checker](#spawn_checker)
+  - [status_page](#status_page)
+- [Multiple Upstreams](#multiple-upstreams)
+- [Installation](#installation)
+- [TODO](#todo)
+- [Community](#community)
+  - [English Mailing List](#english-mailing-list)
+  - [Chinese Mailing List](#chinese-mailing-list)
+- [Bugs and Patches](#bugs-and-patches)
+- [Author](#author)
+- [Copyright and License](#copyright-and-license)
+- [See Also](#see-also)
 
 Status
 ======
@@ -155,18 +156,18 @@ One typical output is
 ```
 Upstream foo.com
     Primary Peers
-        127.0.0.1:12354 up
+        127.0.0.1:12354 UP
         127.0.0.1:12355 DOWN
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 
 Upstream bar.com
     Primary Peers
-        127.0.0.1:12354 up
+        127.0.0.1:12354 UP
         127.0.0.1:12355 DOWN
         127.0.0.1:12357 DOWN
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 ```
 
 If an upstream has no health checkers, then it will be marked by `(NO checkers)`, as in
@@ -174,10 +175,10 @@ If an upstream has no health checkers, then it will be marked by `(NO checkers)`
 ```
 Upstream foo.com (NO checkers)
     Primary Peers
-        127.0.0.1:12354 up
-        127.0.0.1:12355 up
+        127.0.0.1:12354 UP
+        127.0.0.1:12355 UP
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 ```
 
 If you indeed have spawned a healthchecker in `init_worker_by_lua*`, then you should really
