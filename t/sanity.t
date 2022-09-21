@@ -1465,10 +1465,8 @@ healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12359 was checked to be not ok
 $/
-<<<<<<< HEAD
-=======
 
-=== TEST 15: health check using different port
+=== TEST 16: health check using different port
 --- http_config eval
 "$::HttpConfig"
 . q{
@@ -1496,6 +1494,7 @@ server {
 }
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
