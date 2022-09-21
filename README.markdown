@@ -60,6 +60,7 @@ http {
             http_req = "GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n",
                     -- raw HTTP request for checking
 
+            port = nil,  -- the check port, it can be different than the original backend server port, default means the same as the original backend server
             interval = 2000,  -- run the check cycle every 2 sec
             timeout = 1000,   -- 1 sec is the timeout for network operations
             fall = 3,  -- # of successive failures before turning a peer down

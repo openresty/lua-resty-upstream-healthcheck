@@ -502,7 +502,7 @@ check = function(premature, ctx)
     end
 end
 
-local function preprocess_peers(peers)
+local function preprocess_peers(peers, port)
     local n = #peers
     for i = 1, n do
         local p = peers[i]
@@ -512,7 +512,7 @@ local function preprocess_peers(peers)
             local from, to, err = re_find(name, [[^(.*):\d+$]], "jo", nil, 1)
             if from then
                 p.host = sub(name, 1, to)
-                p.port = tonumber(sub(name, to + 2))
+                p.port = port or tonumber(sub(name, to + 2))
             end
         end
     end
@@ -609,8 +609,8 @@ function _M.spawn_checker(opts)
 
     local ctx = {
         upstream = u,
-        primary_peers = preprocess_peers(ppeers),
-        backup_peers = preprocess_peers(bpeers),
+        primary_peers = preprocess_peers(ppeers, opts.port),
+        backup_peers = preprocess_peers(bpeers, opts.port),
         http_req = http_req,
         timeout = timeout,
         interval = interval,
@@ -621,7 +621,7 @@ function _M.spawn_checker(opts)
         version = 0,
         concurrency = concur,
         type = typ,
-        host = host,
+        host = opts.host,
         ssl_verify = ssl_verify
     }
 
