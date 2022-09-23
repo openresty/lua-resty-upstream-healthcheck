@@ -1,4 +1,4 @@
-column_limit: 75
+column_limit: 80
 keep_simple_function_one_line: false
 keep_simple_control_block_one_line: false
 align_table_field: false
