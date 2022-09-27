@@ -18,6 +18,7 @@ Table of Contents
 - [Installation](#installation)
 - [TODO](#todo)
 - [Community](#community)
+  - [Contributing](#contributing)
   - [English Mailing List](#english-mailing-list)
   - [Chinese Mailing List](#chinese-mailing-list)
 - [Bugs and Patches](#bugs-and-patches)
@@ -263,6 +264,16 @@ TODO
 
 Community
 =========
+
+[Back to TOC](#table-of-contents)
+
+Contributing
+--------------------
+
+Use `make lint` to lint the code before you open a PR. This uses the widely used [LuaFormatter](https://github.com/Koihik/LuaFormatter).
+
+The code style is described in the [`.lua-format`](.lua-format) file.\
+If you are using VS Code, you can install the wrapper for that formatter by clicking [here](vscode:extension/Koihik.vscode-lua-format).
 
 [Back to TOC](#table-of-contents)
 
