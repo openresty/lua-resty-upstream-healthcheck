@@ -1,6 +1,5 @@
 local ngx_null = ngx.null
 local tostring = tostring
-local byte = string.byte
 local gsub = string.gsub
 local sort = table.sort
 local pairs = pairs
@@ -9,7 +8,7 @@ local concat = table.concat
 
 local ok, new_tab = pcall(require, "table.new")
 if not ok then
-    new_tab = function (narr, nrec) return {} end
+    new_tab = function (_, _) return {} end
 end
 
 local _M = {}

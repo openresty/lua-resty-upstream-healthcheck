@@ -57,6 +57,7 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -101,10 +102,10 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:12354 up
-        127.0.0.1:12355 up
+        127.0.0.1:12354 UP
+        127.0.0.1:12355 UP
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 upstream addr: 127.0.0.1:12354
 upstream addr: 127.0.0.1:12355
 
@@ -153,6 +154,7 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -197,8 +199,8 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:12354 up
-        127.0.0.1:12355 up
+        127.0.0.1:12354 UP
+        127.0.0.1:12355 UP
     Backup Peers
         127.0.0.1:12356 DOWN
 upstream addr: 127.0.0.1:12354
@@ -253,6 +255,7 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -297,10 +300,10 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:12354 up
+        127.0.0.1:12354 UP
         127.0.0.1:12355 DOWN
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 upstream addr: 127.0.0.1:12354
 upstream addr: 127.0.0.1:12354
 
@@ -359,6 +362,7 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -404,10 +408,10 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:12354 up
+        127.0.0.1:12354 UP
         127.0.0.1:12355 DOWN
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 upstream addr: 127.0.0.1:12354
 upstream addr: 127.0.0.1:12354
 --- no_error_log
@@ -466,6 +470,7 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -513,9 +518,9 @@ GET /t
 Upstream foo.com
     Primary Peers
         127.0.0.1:12354 DOWN
-        127.0.0.1:12355 up
+        127.0.0.1:12355 UP
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 upstream addr: 127.0.0.1:12355
 upstream addr: 127.0.0.1:12355
 --- no_error_log
@@ -583,6 +588,7 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -630,10 +636,10 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:12354 up
-        127.0.0.1:12355 up
+        127.0.0.1:12354 UP
+        127.0.0.1:12355 UP
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 upstream addr: 127.0.0.1:12354
 upstream addr: 127.0.0.1:12355
 
@@ -700,6 +706,7 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     local dict = ngx.shared.healthcheck
     dict:flush_all()
     assert(dict:set("v:foo.com", 1))
@@ -748,10 +755,10 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:12354 up
-        127.0.0.1:12355 up
+        127.0.0.1:12354 UP
+        127.0.0.1:12355 UP
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 upstream addr: 127.0.0.1:12354
 upstream addr: 127.0.0.1:12355
 
@@ -805,6 +812,7 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     local dict = ngx.shared.healthcheck
     dict:flush_all()
     assert(dict:set("v:foo.com", 1))
@@ -854,9 +862,9 @@ GET /t
 Upstream foo.com
     Primary Peers
         127.0.0.1:12354 DOWN
-        127.0.0.1:12355 up
+        127.0.0.1:12355 UP
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 upstream addr: 127.0.0.1:12355
 upstream addr: 127.0.0.1:12355
 
@@ -899,6 +907,7 @@ upstream foo.com {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -961,6 +970,7 @@ upstream foo.com {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -1026,6 +1036,7 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -1120,6 +1131,7 @@ server {
 
 lua_shared_dict healthcheck 2m;
 init_worker_by_lua_block {
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     for i, upstream in ipairs{'foo.com', 'bar.com'} do
@@ -1168,18 +1180,18 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:12354 up
+        127.0.0.1:12354 UP
         127.0.0.1:12355 DOWN
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 
 Upstream bar.com
     Primary Peers
-        127.0.0.1:12354 up
+        127.0.0.1:12354 UP
         127.0.0.1:12355 DOWN
         127.0.0.1:12357 DOWN
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 upstream addr: 127.0.0.1:12354
 upstream addr: 127.0.0.1:12354
 --- no_error_log
@@ -1256,10 +1268,10 @@ GET /t
 --- response_body
 Upstream foo.com (NO checkers)
     Primary Peers
-        127.0.0.1:12354 up
-        127.0.0.1:12355 up
+        127.0.0.1:12354 UP
+        127.0.0.1:12355 UP
     Backup Peers
-        127.0.0.1:12356 up
+        127.0.0.1:12356 UP
 upstream addr: 127.0.0.1:12354
 upstream addr: 127.0.0.1:12355
 --- no_error_log
@@ -1304,6 +1316,7 @@ server {
 
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua_block {
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -1348,10 +1361,10 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:12354 up
-        [::1]:12355 up
+        127.0.0.1:12354 UP
+        [::1]:12355 UP
     Backup Peers
-        [::1]:12356 up
+        [::1]:12356 UP
 upstream addr: 127.0.0.1:12354
 upstream addr: [::1]:12355
 
@@ -1404,6 +1417,7 @@ lua_shared_dict healthcheck 1m;
 --- config
     location = /t {
         content_by_lua_block {
+            ngx.config.debug = 1
             local hc = require "resty.upstream.healthcheck"
 
             local ok, err = hc.spawn_checker{
@@ -1452,7 +1466,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12359 was checked to be not ok
 $/
 
-=== TEST 15: health check using different port
+=== TEST 16: health check using different port
 --- http_config eval
 "$::HttpConfig"
 . q{
@@ -1480,6 +1494,7 @@ server {
 }
 lua_shared_dict healthcheck 1m;
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
@@ -1521,8 +1536,8 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:12354 up
-        127.0.0.1:12355 up
+        127.0.0.1:12354 UP
+        127.0.0.1:12355 UP
     Backup Peers
 upstream addr: 127.0.0.1:12354
 upstream addr: 127.0.0.1:12355

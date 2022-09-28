@@ -1,4 +1,4 @@
-# vim:set ft= ts=4 sw=4 t fdm=marker:
+# vim:set ft= ts=4 sw=4 et fdm=marker:
 use lib 'lib';
 use Test::Nginx::Socket::Lua;
 use Cwd qw(cwd);
@@ -24,7 +24,7 @@ run_tests();
 
 __DATA__
 
-=== TEST 1: https health check (good case), status ignored by default
+=== TEST 1: prometheus format status page (everything is healthy)
 --- http_config eval
 "$::HttpConfig"
 . q{
@@ -35,58 +35,39 @@ upstream foo.com {
 }
 
 server {
-    listen 12354 ssl;
-
-    server_name localhost;
-
-    ssl_certificate     /etc/nginx/ssl/localhost.crt;
-    ssl_certificate_key /etc/nginx/ssl/localhost.key;
-
-    location /status {
+    listen 12354;
+    location = /status {
         return 200;
     }
 }
 
 server {
-    listen 12355 ssl;
-
-    server_name localhost;
-
-    ssl_certificate     /etc/nginx/ssl/localhost.crt;
-    ssl_certificate_key /etc/nginx/ssl/localhost.key;
-
-    location /status {
+    listen 12355;
+    location = /status {
         return 200;
     }
 }
 
 server {
-    listen 12356 ssl;
-
-    server_name localhost;
-
-    ssl_certificate     /etc/nginx/ssl/localhost.crt;
-    ssl_certificate_key /etc/nginx/ssl/localhost.key;
-
-    location /status {
+    listen 12356;
+    location = /status {
         return 200;
     }
 }
 
 lua_shared_dict healthcheck 1m;
-
 init_worker_by_lua '
+    ngx.config.debug = 1
     ngx.shared.healthcheck:flush_all()
     local hc = require "resty.upstream.healthcheck"
     local ok, err = hc.spawn_checker{
         shm = "healthcheck",
         upstream = "foo.com",
-        type = "https",
+        type = "http",
         http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
-        ssl_verify = false,
-        host = "localhost",
         interval = 100,  -- 100ms
         fall = 2,
+	valid_statuses = {200}
     }
     if not ok then
         ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
@@ -99,34 +80,27 @@ init_worker_by_lua '
         access_log off;
         content_by_lua '
             ngx.sleep(0.52)
-
             local hc = require "resty.upstream.healthcheck"
-            ngx.print(hc.status_page())
-
-            for i = 1, 2 do
-                local res = ngx.location.capture("/proxy")
-                ngx.say("upstream addr: ", res.header["X-Foo"])
+            local st , err = hc.prometheus_status_page()
+            if not st then
+                ngx.say(err)
+                return
             end
+            ngx.print(st)
         ';
     }
-
-    location = /proxy {
-        proxy_pass http://foo.com/;
-        header_filter_by_lua '
-            ngx.header["X-Foo"] = ngx.var.upstream_addr;
-        ';
-    }
-
 --- request
 GET /t
 
 --- response_body
-Upstream foo.com
-    Primary Peers
-        127.0.0.1:12354 UP
-        127.0.0.1:12355 UP
-    Backup Peers
-        127.0.0.1:12356 UP
-upstream addr: 127.0.0.1:12354
-upstream addr: 127.0.0.1:12355
---- timeout: 6
+# HELP nginx_upstream_status_info The running status of nginx upstream
+# TYPE nginx_upstream_status_info gauge
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12354",status="UP",role="PRIMARY"} 1
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12354",status="DOWN",role="PRIMARY"} 0
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12355",status="UP",role="PRIMARY"} 1
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12355",status="DOWN",role="PRIMARY"} 0
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12356",status="UP",role="BACKUP"} 1
+nginx_upstream_status_info{name="foo.com",endpoint="127.0.0.1:12356",status="DOWN",role="BACKUP"} 0
+nginx_upstream_status_info{name="foo.com",status="UP"} 1
+nginx_upstream_status_info{name="foo.com",status="DOWN"} 0
+nginx_upstream_status_info{name="foo.com",status="UNKNOWN"} 0
