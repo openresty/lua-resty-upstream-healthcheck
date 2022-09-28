@@ -692,25 +692,31 @@ end
 
 -- combined upstream status adding functions
 
-local function add_upstream_up_prometheus_status(tab, u)
+local function add_upstream_prometheus_status_line(tab, u, st)
     local prefix = 'nginx_upstream_status_info{name="' .. u .. '",status="'
 
-    tab:add(prefix .. 'UP"} 1\n' .. prefix .. 'DOWN"} 0\n' .. prefix
-                .. 'UNKNOWN"} 0')
+    tab:add('nginx_upstream_status_info{name="')
+    tab:add(u)
+    tab:add('",status="')
+    tab:add(st)
+end
+
+local function add_upstream_up_prometheus_status(tab, u)
+    add_upstream_prometheus_status_line(tab, u, 'UP"} 1\n');
+    add_upstream_prometheus_status_line(tab, u, 'DOWN"} 0\n');
+    add_upstream_prometheus_status_line(tab, u, 'UNKNOWN"} 0');
 end
 
 local function add_upstream_down_prometheus_status(tab, u)
-    local prefix = 'nginx_upstream_status_info{name="' .. u .. '",status="'
-
-    tab:add(prefix .. 'UP"} 0\n' .. prefix .. 'DOWN"} 1\n' .. prefix
-                .. 'UNKNOWN"} 0')
+    add_upstream_prometheus_status_line(tab, u, 'UP"} 0\n');
+    add_upstream_prometheus_status_line(tab, u, 'DOWN"} 1\n');
+    add_upstream_prometheus_status_line(tab, u, 'UNKNOWN"} 0');
 end
 
 local function add_upstream_unknown_prometheus_status(tab, u)
-    local prefix = 'nginx_upstream_status_info{name="' .. u .. '",status="'
-
-    tab:add(prefix .. 'UP"} 0\n' .. prefix .. 'DOWN"} 0\n' .. prefix
-                .. 'UNKNOWN"} 1')
+    add_upstream_prometheus_status_line(tab, u, 'UP"} 0\n');
+    add_upstream_prometheus_status_line(tab, u, 'DOWN"} 0\n');
+    add_upstream_prometheus_status_line(tab, u, 'UNKNOWN"} 1');
 end
 
 -- peer status generator functions
