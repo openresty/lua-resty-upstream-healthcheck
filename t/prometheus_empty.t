@@ -59,7 +59,7 @@ init_worker_by_lua '
                 ngx.say(err)
                 return
             end
-            ngx.say(st)
+            ngx.print(st)
         ';
     }
 --- request

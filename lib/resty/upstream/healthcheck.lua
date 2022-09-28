@@ -656,22 +656,6 @@ function _M.spawn_checker(opts)
     return true
 end
 
-local function gen_peers_status_info(peers, bits, idx)
-    local npeers = #peers
-    for i = 1, npeers do
-        local peer = peers[i]
-        bits[idx] = "        "
-        bits[idx + 1] = peer.name
-        if peer.down then
-            bits[idx + 2] = " DOWN\n"
-        else
-            bits[idx + 2] = " UP\n"
-        end
-        idx = idx + 3
-    end
-    return idx
-end
-
 local new_status_meta = {
     __add = function(self, rhs)
         -- debug("new_status_meta:__add: rhs: ", rhs)
@@ -693,8 +677,6 @@ end
 -- combined upstream status adding functions
 
 local function add_upstream_prometheus_status_line(tab, u, st)
-    local prefix = 'nginx_upstream_status_info{name="' .. u .. '",status="'
-
     tab:add('nginx_upstream_status_info{name="')
     tab:add(u)
     tab:add('",status="')
