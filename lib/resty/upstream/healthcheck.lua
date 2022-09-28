@@ -670,7 +670,7 @@ function new_status_meta:add(rhs)
 end
 
 local function new_status_table(n)
-    local tab = {statuses = new_tab(n * 20, 0), idx = 1}
+    local tab = {statuses = new_tab(n * 90, 0), idx = 1}
     return setmetatable(tab, new_status_meta)
 end
 
@@ -812,7 +812,7 @@ function _M.prometheus_status_page()
         ::continue::
     end
 
-    return concat(stats_tab.statuses, "")
+    return concat(stats_tab.statuses)
 end
 
 function _M.status_page()
