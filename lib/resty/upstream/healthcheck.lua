@@ -699,47 +699,53 @@ local function add_upstream_prometheus_status_line(tab, u, st)
     tab:add(u)
     tab:add('",status="')
     tab:add(st)
+    tab:add('\n')
 end
 
 local function add_upstream_up_prometheus_status(tab, u)
-    add_upstream_prometheus_status_line(tab, u, 'UP"} 1\n');
-    add_upstream_prometheus_status_line(tab, u, 'DOWN"} 0\n');
+    add_upstream_prometheus_status_line(tab, u, 'UP"} 1');
+    add_upstream_prometheus_status_line(tab, u, 'DOWN"} 0');
     add_upstream_prometheus_status_line(tab, u, 'UNKNOWN"} 0');
 end
 
 local function add_upstream_down_prometheus_status(tab, u)
-    add_upstream_prometheus_status_line(tab, u, 'UP"} 0\n');
-    add_upstream_prometheus_status_line(tab, u, 'DOWN"} 1\n');
+    add_upstream_prometheus_status_line(tab, u, 'UP"} 0');
+    add_upstream_prometheus_status_line(tab, u, 'DOWN"} 1');
     add_upstream_prometheus_status_line(tab, u, 'UNKNOWN"} 0');
 end
 
 local function add_upstream_unknown_prometheus_status(tab, u)
-    add_upstream_prometheus_status_line(tab, u, 'UP"} 0\n');
-    add_upstream_prometheus_status_line(tab, u, 'DOWN"} 0\n');
+    add_upstream_prometheus_status_line(tab, u, 'UP"} 0');
+    add_upstream_prometheus_status_line(tab, u, 'DOWN"} 0');
     add_upstream_prometheus_status_line(tab, u, 'UNKNOWN"} 1');
 end
 
 -- peer status generator functions
 
-local function gen_peer_prometheus_status(u, p, r, s, n)
-    local r = string.format(
-                  "nginx_upstream_status_info{name=\"%s\",endpoint=\"%s\",status=\"%s\",role=\"%s\"} %d",
-                  u, p, s, r, n)
-    return r
+local function gen_peer_prometheus_status(tab, u, p, r, s, n)
+    tab:add("nginx_upstream_status_info{name=\"")
+    tab:add(u)
+    tab:add("\",endpoint=\"")
+    tab:add(p)
+    tab:add("\",status=\"")
+    tab:add(s)
+    tab:add("\",role=\"")
+    tab:add(r)
+    tab:add("\"} ")
+    tab:add(n)
+    tab:add("\n")
 end
 
 -- combined peer status adding function
 
 local function add_peer_status(tab, u, p, r)
-    tab:add(
-        gen_peer_prometheus_status(u, p.name, r, "UP", not p.down and 1 or 0))
-    tab:add(gen_peer_prometheus_status(u, p.name, r, "DOWN", p.down and 1 or 0))
+    gen_peer_prometheus_status(tab, u, p.name, r, "UP", not p.down and 1 or 0)
+    gen_peer_prometheus_status(tab, u, p.name, r, "DOWN", p.down and 1 or 0)
 end
 
 local function add_peer_prometheus_status(tab, u, p, r)
-    tab:add(
-        gen_peer_prometheus_status(u, p.name, r, "UP", not p.down and 1 or 0))
-    tab:add(gen_peer_prometheus_status(u, p.name, r, "DOWN", p.down and 1 or 0))
+    gen_peer_prometheus_status(tab, u, p.name, r, "UP", not p.down and 1 or 0)
+    gen_peer_prometheus_status(tab, u, p.name, r, "DOWN", p.down and 1 or 0)
 end
 
 local function add_peers_info(tab, u, peers, role)
@@ -784,8 +790,8 @@ function _M.prometheus_status_page()
     local stats_tab = new_status_table(n)
 
     stats_tab:add(
-        "# HELP nginx_upstream_status_info The running status of nginx upstream")
-    stats_tab:add("# TYPE nginx_upstream_status_info gauge")
+        "# HELP nginx_upstream_status_info The running status of nginx upstream\n")
+    stats_tab:add("# TYPE nginx_upstream_status_info gauge\n")
 
     for i = 1, n do
         local u = us[i]
@@ -824,7 +830,7 @@ function _M.prometheus_status_page()
         ::continue::
     end
 
-    return concat(stats_tab.statuses, "\n")
+    return concat(stats_tab.statuses, "")
 end
 
 function _M.status_page()
