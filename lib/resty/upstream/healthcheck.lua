@@ -23,7 +23,7 @@ local setmetatable = setmetatable
 
 -- LuaFormatter off
 local _M = {
-    _VERSION = '0.05'
+    _VERSION = '0.07'
 }
 
 if not ngx.config
