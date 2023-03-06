@@ -11,7 +11,6 @@ compiler:
 addons:
   apt:
     packages:
-    - cpanminus
     - axel
 
 cache:
@@ -40,7 +39,7 @@ env:
 install:
   - if [ ! -d download-cache ]; then mkdir download-cache; fi
   - if [ ! -f download-cache/openssl-$OPENSSL_VER.tar.gz ]; then wget -O download-cache/openssl-$OPENSSL_VER.tar.gz https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz; fi
-  - sudo cpanm --notest Test::Nginx > build.log 2>&1 || (cat build.log && exit 1)
+  - cpanm --sudo --notest Test::Nginx > build.log 2>&1 || (cat build.log && exit 1)
   - git clone https://github.com/openresty/openresty.git ../openresty
   - git clone https://github.com/openresty/nginx-devel-utils.git
   - git clone https://github.com/simpl/ngx_devel_kit.git ../ndk-nginx-module
