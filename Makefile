@@ -12,8 +12,6 @@ all: ;
 install: all
 	$(INSTALL) -d $(DESTDIR)/$(LUA_LIB_DIR)/resty/upstream/
 	$(INSTALL) lib/resty/upstream/*.lua $(DESTDIR)/$(LUA_LIB_DIR)/resty/upstream/
-	$(INSTALL) -d /etc/nginx/ssl/
-	$(INSTALL) t/cert/localhost.* /etc/nginx/ssl/
 
 test: all
 	PATH=$(OPENRESTY_PREFIX)/nginx/sbin:$$PATH prove -I../test-nginx/lib -r t
