@@ -1,6 +1,10 @@
 sudo: required
 dist: focal
 
+branches:
+  only:
+    - "master"
+
 os: linux
 
 language: c
@@ -34,14 +38,14 @@ env:
     - LD_LIBRARY_PATH=$LUAJIT_LIB:$LD_LIBRARY_PATH
     - TEST_NGINX_SLEEP=0.006
   matrix:
-    - NGINX_VERSION=1.25.1
+    - NGINX_VERSION=1.25.3
 
 install:
   - if [ ! -d download-cache ]; then mkdir download-cache; fi
   - if [ ! -f download-cache/openssl-$OPENSSL_VER.tar.gz ]; then wget -O download-cache/openssl-$OPENSSL_VER.tar.gz https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz; fi
   - cpanm --sudo --notest Test::Nginx > build.log 2>&1 || (cat build.log && exit 1)
   - git clone https://github.com/openresty/openresty.git ../openresty
-  - git clone https://github.com/openresty/nginx-devel-utils.git
+  - git clone https://github.com/openresty/openresty-devel-utils.git ../openresty-devel-utils
   - git clone https://github.com/simpl/ngx_devel_kit.git ../ndk-nginx-module
   - git clone https://github.com/openresty/lua-nginx-module.git ../lua-nginx-module
   - git clone https://github.com/openresty/lua-resty-core.git ../lua-resty-core
@@ -65,7 +69,7 @@ script:
   - make -j$JOBS > build.log 2>&1 || (cat build.log && exit 1)
   - sudo make PATH=$PATH install_sw > build.log 2>&1 || (cat build.log && exit 1)
   - cd ../mockeagain/ && make CC=$CC -j$JOBS && cd ..
-  - export PATH=$PWD/work/nginx/sbin:$PWD/nginx-devel-utils:$PATH
+  - export PATH=$PWD/work/nginx/sbin:$PWD/../openresty-devel-utils:$PATH
   - export LD_PRELOAD=$PWD/mockeagain/mockeagain.so
   - export LD_LIBRARY_PATH=$PWD/mockeagain:$LD_LIBRARY_PATH
   - export TEST_NGINX_RESOLVER=8.8.4.4
