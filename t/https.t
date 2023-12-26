@@ -39,8 +39,8 @@ server {
 
     server_name localhost;
 
-    ssl_certificate     /etc/nginx/ssl/localhost.crt;
-    ssl_certificate_key /etc/nginx/ssl/localhost.key;
+    ssl_certificate     ../../cert/localhost.crt;
+    ssl_certificate_key ../../cert/localhost.key;
 
     location /status {
         return 200;
@@ -52,8 +52,8 @@ server {
 
     server_name localhost;
 
-    ssl_certificate     /etc/nginx/ssl/localhost.crt;
-    ssl_certificate_key /etc/nginx/ssl/localhost.key;
+    ssl_certificate     ../../cert/localhost.crt;
+    ssl_certificate_key ../../cert/localhost.key;
 
     location /status {
         return 200;
@@ -65,8 +65,8 @@ server {
 
     server_name localhost;
 
-    ssl_certificate     /etc/nginx/ssl/localhost.crt;
-    ssl_certificate_key /etc/nginx/ssl/localhost.key;
+    ssl_certificate     ../../cert/localhost.crt;
+    ssl_certificate_key ../../cert/localhost.key;
 
     location /status {
         return 200;

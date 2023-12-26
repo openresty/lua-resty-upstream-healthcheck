@@ -55,8 +55,6 @@ install:
   - git clone https://github.com/openresty/no-pool-nginx.git ../no-pool-nginx
   - git clone -b v2.1-agentzh https://github.com/openresty/luajit2.git
   - git clone https://github.com/openresty/mockeagain.git
-  - sudo mkdir -p /etc/nginx/ssl/
-  - sudo cp -r t/cert/localhost.* /etc/nginx/ssl/
 
 script:
   - cd luajit2/
