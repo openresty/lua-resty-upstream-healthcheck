@@ -34,11 +34,11 @@ env:
     - OPENSSL_PREFIX=/opt/ssl
     - OPENSSL_LIB=$OPENSSL_PREFIX/lib
     - OPENSSL_INC=$OPENSSL_PREFIX/include
-    - OPENSSL_VER=1.1.1u
+    - OPENSSL_VER=1.1.1w
     - LD_LIBRARY_PATH=$LUAJIT_LIB:$LD_LIBRARY_PATH
     - TEST_NGINX_SLEEP=0.006
   matrix:
-    - NGINX_VERSION=1.25.3
+    - NGINX_VERSION=1.27.1
 
 install:
   - if [ ! -d download-cache ]; then mkdir download-cache; fi
