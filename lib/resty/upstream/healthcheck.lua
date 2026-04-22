@@ -410,9 +410,37 @@ local function upgrade_peers_version(ctx, peers, is_backup)
     end
 end
 
+local function preprocess_peers(peers, port)
+    local n = #peers
+    for i = 1, n do
+        local p = peers[i]
+        local name = p.name
+
+        if name then
+            local from, to, err = re_find(name, [[^(.*):\d+$]], "jo", nil, 1)
+            if from then
+                p.host = sub(name, 1, to)
+                p.port = port or tonumber(sub(name, to + 2))
+            end
+        end
+    end
+    return peers
+end
+
 local function check_peers_updates(ctx)
     local dict = ctx.dict
     local u = ctx.upstream
+
+    local ppeers, err = get_primary_peers(u)
+    if ppeers then
+        ctx.primary_peers = preprocess_peers(ppeers, ctx.port)
+    end
+
+    local bpeers, err = get_backup_peers(u)
+    if bpeers then
+        ctx.backup_peers = preprocess_peers(bpeers, ctx.port)
+    end
+
     local key = "v:" .. u
     local ver, err = dict:get(key)
     if not ver then
@@ -518,23 +546,6 @@ check = function(premature, ctx)
     end
 end
 
-local function preprocess_peers(peers, port)
-    local n = #peers
-    for i = 1, n do
-        local p = peers[i]
-        local name = p.name
-
-        if name then
-            local from, to, err = re_find(name, [[^(.*):\d+$]], "jo", nil, 1)
-            if from then
-                p.host = sub(name, 1, to)
-                p.port = port or tonumber(sub(name, to + 2))
-            end
-        end
-    end
-    return peers
-end
-
 function _M.spawn_checker(opts)
     local typ = opts.type
     if not typ then
@@ -627,6 +638,7 @@ function _M.spawn_checker(opts)
         upstream = u,
         primary_peers = preprocess_peers(ppeers, opts.port),
         backup_peers = preprocess_peers(bpeers, opts.port),
+        port = opts.port,
         http_req = http_req,
         timeout = timeout,
         interval = interval,
