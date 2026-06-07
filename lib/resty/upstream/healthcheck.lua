@@ -247,8 +247,12 @@ local function check_peer(ctx, id, peer, is_backup)
 
     local bytes, err = sock:send(req)
     if not bytes then
-        return peer_error(ctx, is_backup, id, peer,
-                          "failed to send request to ", name, ": ", err)
+        peer_error(ctx, is_backup, id, peer,
+                   "failed to send request to ", name, ": ", err)
+        if err == "timeout" then
+            sock:close() -- timeout errors do not close the socket.
+        end
+        return
     end
 
     local status_line, err = sock:receive()
