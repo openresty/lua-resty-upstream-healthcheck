@@ -9,7 +9,7 @@ use Cwd qw(cwd);
 
 #repeat_each(2);
 
-plan tests => repeat_each() * (blocks() * 6 + 11);
+plan tests => repeat_each() * (blocks() * 6 + 8);
 
 my $pwd = cwd();
 
@@ -1536,8 +1536,8 @@ GET /t
 --- response_body
 Upstream foo.com
     Primary Peers
-        127.0.0.1:12354 UP
-        127.0.0.1:12355 UP
+        127.0.0.1:12354 (probe :12356) UP
+        127.0.0.1:12355 (probe :12356) UP
     Backup Peers
 upstream addr: 127.0.0.1:12354
 upstream addr: 127.0.0.1:12355
@@ -1554,4 +1554,56 @@ healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 ){3,5}$/
+--- timeout: 6
+
+
+
+=== TEST 17: health check using different port, failed probe names the probe port
+--- http_config eval
+"$::HttpConfig"
+. q{
+upstream foo.com {
+    server 127.0.0.1:12354;
+}
+server {
+    listen 12354;
+    location = /status {
+        return 200;
+    }
+}
+lua_shared_dict healthcheck 1m;
+init_worker_by_lua '
+    ngx.config.debug = 1
+    ngx.shared.healthcheck:flush_all()
+    local hc = require "resty.upstream.healthcheck"
+    local ok, err = hc.spawn_checker{
+        shm = "healthcheck",
+        upstream = "foo.com",
+        type = "http",
+        http_req = "GET /status HTTP/1.0\\\\r\\\\nHost: localhost\\\\r\\\\n\\\\r\\\\n",
+        interval = 100,  -- 100ms
+        fall = 1,
+        port = 12356,
+    }
+    if not ok then
+        ngx.log(ngx.ERR, "failed to spawn health checker: ", err)
+        return
+    end
+';
+}
+--- config
+    location = /t {
+        access_log off;
+        content_by_lua '
+            ngx.sleep(0.32)
+            ngx.say("ok")
+        ';
+    }
+--- request
+GET /t
+--- response_body
+ok
+--- grep_error_log eval: qr/failed to connect to [\d.]+:\d+/
+--- grep_error_log_out eval
+qr/^(?:failed to connect to 127\.0\.0\.1:12356\n)+$/
 --- timeout: 6
