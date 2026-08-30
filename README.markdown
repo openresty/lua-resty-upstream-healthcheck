@@ -172,7 +172,7 @@ Upstream bar.com
         127.0.0.1:12356 UP
 ```
 
-If an upstream has no health checkers, then it will be marked by `(NO checkers)`, as in
+If you turn on lua_code_cache off or an upstream has no health checkers, then it will be marked by `(NO checkers)`, as in
 
 ```
 Upstream foo.com (NO checkers)
