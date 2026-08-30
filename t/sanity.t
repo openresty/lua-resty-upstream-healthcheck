@@ -210,7 +210,7 @@ upstream addr: 127.0.0.1:12355
 [alert]
 failed to run healthcheck cycle
 --- error_log
-healthcheck: failed to connect to 127.0.0.1:12356: connection refused
+healthcheck: failed to connect to 127.0.0.1:12356: connection refused in upstream foo.com
 --- grep_error_log eval: qr/healthcheck: .*? was checked .*|warn\(\): .*(?=,)|publishing peers version \d+|upgrading peers version to \d+/
 --- grep_error_log_out eval
 qr/^healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
@@ -219,7 +219,7 @@ healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be not ok
-warn\(\): healthcheck: peer 127\.0\.0\.1:12356 is turned down after 2 failure\(s\)
+warn\(\): healthcheck: peer 127\.0\.0\.1:12356 is turned down after 2 failure\(s\) in upstream foo\.com
 publishing peers version 1
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
@@ -319,7 +319,7 @@ healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
-warn\(\): healthcheck: peer 127\.0\.0\.1:12355 is turned down after 2 failure\(s\)
+warn\(\): healthcheck: peer 127\.0\.0\.1:12355 is turned down after 2 failure\(s\) in upstream foo\.com
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
@@ -420,13 +420,13 @@ failed to run healthcheck cycle
 --- grep_error_log eval: qr/healthcheck: .*? was checked .*|warn\(\): .*(?=,)|healthcheck: bad status code from .*(?=,)|upgrading peers version to \d+/
 --- grep_error_log_out eval
 qr/^healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
-healthcheck: bad status code from 127\.0\.0\.1:12355: 404
+healthcheck: bad status code from 127\.0\.0\.1:12355: 404 in upstream foo\.com
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
-healthcheck: bad status code from 127\.0\.0\.1:12355: 404
+healthcheck: bad status code from 127\.0\.0\.1:12355: 404 in upstream foo\.com
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
-warn\(\): healthcheck: peer 127\.0\.0\.1:12355 is turned down after 2 failure\(s\)
+warn\(\): healthcheck: peer 127\.0\.0\.1:12355 is turned down after 2 failure\(s\) in upstream foo\.com
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
@@ -527,14 +527,14 @@ upstream addr: 127.0.0.1:12355
 [alert]
 failed to run healthcheck cycle
 --- error_log
-healthcheck: failed to receive status line from 127.0.0.1:12354: timeout
+healthcheck: failed to receive status line from 127.0.0.1:12354: timeout in upstream foo.com
 --- grep_error_log eval: qr/healthcheck: .*? was checked .*|warn\(\): .*(?=,)|healthcheck: bad status code from .*(?=,)|upgrading peers version to \d+/
 --- grep_error_log_out eval
 qr/^healthcheck: peer 127\.0\.0\.1:12354 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12354 was checked to be not ok
-warn\(\): healthcheck: peer 127\.0\.0\.1:12354 is turned down after 2 failure\(s\)
+warn\(\): healthcheck: peer 127\.0\.0\.1:12354 is turned down after 2 failure\(s\) in upstream foo\.com
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be not ok
@@ -649,9 +649,9 @@ failed to run healthcheck cycle
 --- grep_error_log eval: qr/healthcheck: .*? was checked .*|warn\(\): .*(?=,)|healthcheck: bad status code from .*(?=,)|publishing peers version \d+|upgrading peers version to \d+/
 --- grep_error_log_out eval
 qr/^healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
-healthcheck: bad status code from 127\.0\.0\.1:12355: 403
+healthcheck: bad status code from 127\.0\.0\.1:12355: 403 in upstream foo\.com
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be not ok
-warn\(\): healthcheck: peer 127\.0\.0\.1:12355 is turned down after 1 failure\(s\)
+warn\(\): healthcheck: peer 127\.0\.0\.1:12355 is turned down after 1 failure\(s\) in upstream foo\.com
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 publishing peers version 1
 healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
@@ -662,7 +662,7 @@ healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
-warn\(\): healthcheck: peer 127\.0\.0\.1:12355 is turned up after 2 success\(es\)
+warn\(\): healthcheck: peer 127\.0\.0\.1:12355 is turned up after 2 success\(es\) in upstream foo\.com
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 publishing peers version 2
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
@@ -775,9 +775,9 @@ healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
-warn\(\): healthcheck: peer 127\.0\.0\.1:12355 is turned up after 2 success\(es\)
+warn\(\): healthcheck: peer 127\.0\.0\.1:12355 is turned up after 2 success\(es\) in upstream foo\.com
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
-warn\(\): healthcheck: peer 127\.0\.0\.1:12356 is turned up after 2 success\(es\)
+warn\(\): healthcheck: peer 127\.0\.0\.1:12356 is turned up after 2 success\(es\) in upstream foo\.com
 publishing peers version 2
 (?:healthcheck: peer 127\.0\.0\.1:12354 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
@@ -880,7 +880,7 @@ healthcheck: peer 127\.0\.0\.1:12354 was checked to be not ok
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12354 was checked to be not ok
-warn\(\): healthcheck: peer 127\.0\.0\.1:12354 is turned down after 2 failure\(s\)
+warn\(\): healthcheck: peer 127\.0\.0\.1:12354 is turned down after 2 failure\(s\) in upstream foo\.com
 healthcheck: peer 127\.0\.0\.1:12355 was checked to be ok
 healthcheck: peer 127\.0\.0\.1:12356 was checked to be ok
 publishing peers version 2
@@ -1198,8 +1198,8 @@ upstream addr: 127.0.0.1:12354
 [alert]
 failed to run healthcheck cycle
 --- error_log
-healthcheck: bad status code from 127.0.0.1:12355
-healthcheck: bad status code from 127.0.0.1:12357
+healthcheck: bad status code from 127.0.0.1:12355: 404 in upstream foo.com
+healthcheck: bad status code from 127.0.0.1:12355: 404 in upstream bar.com
 --- timeout: 6
 
 
