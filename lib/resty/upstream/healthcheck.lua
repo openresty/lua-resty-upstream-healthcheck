@@ -52,6 +52,7 @@ local get_backup_peers = upstream.get_backup_peers
 local get_upstreams = upstream.get_upstreams
 
 local upstream_checker_statuses = {}
+local upstream_checker_ports = {}
 
 local function warn(...)
     log(WARN, "healthcheck: ", ...)
@@ -212,6 +213,9 @@ end
 local function check_peer(ctx, id, peer, is_backup)
     local ok
     local name = peer.name
+    if peer.host and peer.port then
+        name = peer.host .. ":" .. peer.port
+    end
     local statuses = ctx.statuses
     local req = ctx.http_req
 
@@ -668,6 +672,7 @@ function _M.spawn_checker(opts)
     end
 
     update_upstream_checker_status(u, true)
+    upstream_checker_ports[u] = opts.port
 
     return true
 end
@@ -747,11 +752,17 @@ local function add_peer_prometheus_status(tab, u, p, r)
 end
 
 local function add_peers_info(tab, u, peers, role)
+    local probe_port = upstream_checker_ports[u]
     local npeers = #peers
     for i = 1, npeers do
         local peer = peers[i]
         tab:add("        ")
         tab:add(peer.name)
+        if probe_port then
+            tab:add(" (probe :")
+            tab:add(probe_port)
+            tab:add(")")
+        end
         if peer.down then
             tab:add(" DOWN\n")
         else

@@ -183,6 +183,20 @@ Upstream foo.com (NO checkers)
         127.0.0.1:12356 UP
 ```
 
+If a checker was spawned with the `port` option (so peers are probed on a port
+other than the one they are configured with in the `upstream` block), the
+probed port is shown next to each peer, since that is the port the UP/DOWN
+state was actually measured against:
+
+```
+Upstream foo.com
+    Primary Peers
+        127.0.0.1:12354 (probe :8081) UP
+        127.0.0.1:12355 (probe :8081) DOWN
+    Backup Peers
+        127.0.0.1:12356 (probe :8081) UP
+```
+
 If you indeed have spawned a healthchecker in `init_worker_by_lua*`, then you should really
 check out the NGINX error log file to see if there is any fatal errors aborting the healthchecker threads.
 
