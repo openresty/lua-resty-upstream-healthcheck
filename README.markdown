@@ -56,10 +56,12 @@ http {
         local ok, err = hc.spawn_checker{
             shm = "healthcheck",  -- defined by "lua_shared_dict"
             upstream = "foo.com", -- defined by "upstream"
-            type = "http", -- support "http" and "https"
+            type = "http", -- support "http", "https" and "tcp"
 
             http_req = "GET /status HTTP/1.0\r\nHost: foo.com\r\n\r\n",
-                    -- raw HTTP request for checking
+                    -- raw HTTP request for checking, required for "http" and
+                    -- "https" types, ignored for "tcp" (which only opens a
+                    -- connection to verify the peer is reachable)
 
             port = nil,  -- the check port, it can be different than the original backend server port, default means the same as the original backend server
             interval = 2000,  -- run the check cycle every 2 sec
@@ -140,6 +142,17 @@ The healthchecker does not need any client traffic to function. The checks are p
 and periodically.
 
 This method call is asynchronous and returns immediately.
+
+The `type` option selects how a peer is probed:
+
+* `"http"`: send `http_req` and check the response status line (the default behavior).
+* `"https"`: same as `"http"`, but a TLS handshake is performed first.
+* `"tcp"`: only open a TCP connection to the peer; the peer is considered healthy
+  if the connection succeeds. `http_req` is not required for this type. This is
+  useful for checking non-HTTP backends without producing needless access log entries.
+  Set `ssl = true` to also perform a TLS handshake after connecting (the peer is
+  healthy only if the handshake succeeds); `ssl_verify` and `host` apply as they do
+  for the `"https"` type.
 
 Returns true on success, or `nil` and a string describing an error otherwise.
 
