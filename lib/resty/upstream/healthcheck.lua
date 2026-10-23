@@ -143,7 +143,8 @@ local function peer_fail(ctx, is_backup, id, peer)
     -- ", fails: ", fails)
 
     if not peer.down and fails >= ctx.fall then
-        warn("peer ", peer.name, " is turned down after ", fails, " failure(s)")
+        warn("peer ", peer.name, " is turned down after ", fails,
+             " failure(s) in upstream ", ctx.upstream)
         peer.down = true
         set_peer_down_globally(ctx, is_backup, id, true)
     end
@@ -195,7 +196,8 @@ local function peer_ok(ctx, is_backup, id, peer)
     end
 
     if peer.down and succ >= ctx.rise then
-        warn("peer ", peer.name, " is turned up after ", succ, " success(es)")
+        warn("peer ", peer.name, " is turned up after ", succ,
+             " success(es) in upstream ", ctx.upstream)
         peer.down = nil
         set_peer_down_globally(ctx, is_backup, id, nil)
     end
@@ -230,10 +232,9 @@ local function check_peer(ctx, id, peer, is_backup)
         ok, err = sock:connect(name)
     end
     if not ok then
-        if not peer.down then
-            errlog("failed to connect to ", name, ": ", err)
-        end
-        return peer_fail(ctx, is_backup, id, peer)
+        return peer_error(ctx, is_backup, id, peer,
+                          "failed to connect to ", name, ": ", err,
+                          " in upstream ", ctx.upstream)
     end
 
     if ctx.type == "https" then
@@ -241,14 +242,16 @@ local function check_peer(ctx, id, peer, is_backup)
         if not ok then
             sock:close()
             return peer_error(ctx, is_backup, id, peer,
-                              "failed to ssl handshake to ", name, ": ", err)
+                              "failed to ssl handshake to ", name, ": ", err,
+                              " in upstream ", ctx.upstream)
         end
     end
 
     local bytes, err = sock:send(req)
     if not bytes then
         peer_error(ctx, is_backup, id, peer,
-                   "failed to send request to ", name, ": ", err)
+                   "failed to send request to ", name, ": ", err,
+                   " in upstream ", ctx.upstream)
         if err == "timeout" then
             sock:close() -- timeout errors do not close the socket.
         end
@@ -258,7 +261,8 @@ local function check_peer(ctx, id, peer, is_backup)
     local status_line, err = sock:receive()
     if not status_line then
         peer_error(ctx, is_backup, id, peer,
-                   "failed to receive status line from ", name, ": ", err)
+                   "failed to receive status line from ", name, ": ", err,
+                   " in upstream ", ctx.upstream)
         if err == "timeout" then
             sock:close() -- timeout errors do not close the socket.
         end
@@ -274,7 +278,7 @@ local function check_peer(ctx, id, peer, is_backup)
 
         if not from then
             peer_error(ctx, is_backup, id, peer, "bad status line from ", name,
-                       ": ", status_line)
+                       ": ", status_line, " in upstream ", ctx.upstream)
             sock:close()
             return
         end
@@ -282,7 +286,7 @@ local function check_peer(ctx, id, peer, is_backup)
         local status = tonumber(sub(status_line, from, to))
         if not statuses[status] then
             peer_error(ctx, is_backup, id, peer, "bad status code from ", name,
-                       ": ", status)
+                       ": ", status, " in upstream ", ctx.upstream)
             sock:close()
             return
         end
